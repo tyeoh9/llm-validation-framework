@@ -4,7 +4,6 @@ from rank_bm25 import BM25Okapi
 '''
 TODO:
 - simplify(): condense a sentence into its essence (used for input + output)
-- rank_results(): Out of the search results, pick the search result with highest BM25 score
 - If there are no good results (<threshold), scrape highest ranked (or maybe popular?) page
     - Tutorial: https://codesignal.com/learn/courses/navigating-the-web-for-information/lessons/searching-the-web-with-ddgs-in-python
 '''
