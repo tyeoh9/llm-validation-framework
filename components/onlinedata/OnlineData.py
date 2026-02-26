@@ -4,11 +4,13 @@ from rank_bm25 import BM25Okapi
 '''
 TODO:
 - simplify(): condense a sentence into its essence (used for input + output)
+    - OR we can just find the text snippet which best matches the query
 - If there are no good results (<threshold), scrape highest ranked (or maybe popular?) page
     - Tutorial: https://codesignal.com/learn/courses/navigating-the-web-for-information/lessons/searching-the-web-with-ddgs-in-python
+- Find a way to make sure the facts are accurate
 '''
 
-class OnlineData():
+class OnlineData:
 
     def __init__(self, max_results=10):
         self.searcher = DDGS()
