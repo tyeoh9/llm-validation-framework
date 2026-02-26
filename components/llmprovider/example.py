@@ -10,10 +10,7 @@ from components.llmprovider.LLMProvider import LLMProvider
 
 
 if __name__ == "__main__":
-    # Load Anthropic API key from config.ini via config_loader
     api_key = load_api_key(provider="ANTHROPIC")
-
-    # Choose a lightweight Anthropic model supported by litellm
     provider_name = "anthropic"
     model_name = "claude-3-haiku-20240307"
 
