@@ -11,6 +11,7 @@ TODO:
 '''
 
 class OnlineData:
+    """Retrieves relevant facts/data from the web based on the query."""
 
     def __init__(self, max_results=10):
         self.searcher = DDGS()

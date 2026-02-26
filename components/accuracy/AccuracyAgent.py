@@ -14,10 +14,9 @@ from config_loader import load_api_key
 
 
 class AccuracyAgent:
-    def __init__(
-        self,
-        config_path: str | None = None,
-    ):
+    """Uses LLM-as-a-judge to check factual accuracy of a statement."""
+
+    def __init__(self, config_path: str | None = None):
         api_key = load_api_key(config_path)
         model = AnthropicModel(model="claude-3-5-haiku-latest", api_key=api_key)
 

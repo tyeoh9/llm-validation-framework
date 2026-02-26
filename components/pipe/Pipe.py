@@ -1,7 +1,5 @@
 class Pipe:
-    """
-    Sequentially evaluates a list of steps, stopping early on the first failure.
-    """
+    """Sequentially evaluates a list of steps, stopping early on the first failure."""
 
     def __init__(self, steps: list):
         self.steps = steps

@@ -1,10 +1,11 @@
 import litellm
 
-'''
-To see which providers this class supports, visit https://docs.litellm.ai/docs/providers
-'''
-
 class LLMProvider:
+    """
+    A unified interface to call various LLM providers.
+    To see which providers this class supports, visit https://docs.litellm.ai/docs/providers
+    """
+
     def __init__(self, provider: str, model: str, key: str):
         self.model_string = f"{provider}/{model}"
         self.key = key
