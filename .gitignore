@@ -1,1 +1,8 @@
 config.ini
+
+# Python cache artifacts
+__pycache__/
+*.py[cod]
+
+# DeepEval local artifacts
+.deepeval/
