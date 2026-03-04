@@ -5,43 +5,64 @@ from deepeval.models import GeminiModel, AnthropicModel
 from deepeval.metrics import GEval
 from deepeval.test_case import LLMTestCase, LLMTestCaseParams
 
-# Add root directory to path to import config_loader
-root_dir = Path(__file__).parent.parent
-if str(root_dir) not in sys.path:
-    sys.path.insert(0, str(root_dir))
+# Add repository root to path to import shared modules
+ROOT = Path(__file__).resolve().parents[2]
+if str(ROOT) not in sys.path:
+    sys.path.insert(0, str(ROOT))
 
 from config_loader import load_api_key
+from components.onlinedata.OnlineData import OnlineData
+from models import EvaluationResult
 
 
 class AccuracyAgent:
     """Uses LLM-as-a-judge to check factual accuracy of a statement."""
 
-    def __init__(self, config_path: str | None = None):
+    name = "AccuracyAgent"
+
+    def __init__(self, config_path: str | None = None, max_results: int = 10):
+        self.config_path = config_path
+        self._online = OnlineData(max_results=max_results)
+
         api_key = load_api_key(config_path)
-        model = AnthropicModel(model="claude-3-5-haiku-latest", api_key=api_key)
+        # TODO: Make this model agnostic (make LLMProvider class compatible with deepeval)
+        model = AnthropicModel(model="claude-haiku-4-5", api_key=api_key)
 
         self.equivalence_metric = GEval(
             name="Text Equivalence",
             evaluation_steps=[
                 "Check whether the facts in 'actual output' contradicts any facts in 'expected output'",
-                "You should also heavily penalize omission of detail",
-                "Vague language, or contradicting OPINIONS, are OK"
+                "Contradicting opinions are OK but contradict facts are not."
             ],
-            evaluation_params=[LLMTestCaseParams.INPUT, LLMTestCaseParams.ACTUAL_OUTPUT, LLMTestCaseParams.EXPECTED_OUTPUT],
+            evaluation_params=[
+                LLMTestCaseParams.INPUT,
+                LLMTestCaseParams.ACTUAL_OUTPUT,
+                LLMTestCaseParams.EXPECTED_OUTPUT,
+            ],
             model=model,
             threshold=0.5,
         )
 
-    def evaluate(self, text1: str, text2: str) -> dict:
-        """Evaluate the equivalence between two text strings and return a score and reason."""
+    def find_evidence(self, query: str) -> str:
+        """Retrieve external evidence for a query (currently via OnlineData only)."""
+        # TODO: Implement mechanism to retrieve either online or RAG evidence
+        body, href = self._online.search(query)
+        return f"[Source: {href}]\n{body}"
+
+    def evaluate(self, text: str) -> EvaluationResult:
+        """Evaluate a single text against external evidence."""
+        evidence = self.find_evidence(text)
 
         test_case = LLMTestCase(
-            input="Determine if the actual output is semantically equivalent to the expected output.",
-            actual_output=text1,
-            expected_output=text2,
+            input="Determine if the actual output is semantically consistent with the evidence text.",
+            actual_output=text,
+            expected_output=evidence,
         )
         self.equivalence_metric.measure(test_case)
-        return {
-            "score": self.equivalence_metric.score,
-            "reason": self.equivalence_metric.reason,
-        }
+
+        score = float(self.equivalence_metric.score or 0.0)
+        threshold = float(getattr(self.equivalence_metric, "threshold", 0.5))
+        status = "PASS" if score >= threshold else "FAIL"
+        reason = getattr(self.equivalence_metric, "reason", "")
+
+        return {"status": status, "score": score, "reason": reason}
