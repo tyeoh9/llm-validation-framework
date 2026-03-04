@@ -32,7 +32,7 @@ class AccuracyAgent:
             name="Text Equivalence",
             evaluation_steps=[
                 "Check whether the facts in 'actual output' contradicts any facts in 'expected output'",
-                "Vague language, or contradicting OPINIONS, are OK",
+                "Contradicting opinions are OK but contradict facts are not."
             ],
             evaluation_params=[
                 LLMTestCaseParams.INPUT,
