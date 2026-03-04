@@ -39,8 +39,6 @@ def main():
         print("\n" + "=" * 60)
         for i, r in enumerate(results, start=1):
             print(f"Step {i}: {r.get('status', '?')} | score={r.get('score', 0):.2f}")
-            if r.get("reason"):
-                print(f"  reason: {r['reason']}")
         print("=" * 60 + "\n")
 
 

@@ -10,9 +10,14 @@ class Pipe:
 
     def evaluate(self, data) -> list[dict]:
         results = []
-        for step in self.steps:
+        for idx, step in enumerate(self.steps, start=1):
             result = step.evaluate(data)
             results.append(result)
+
+            if result.get("reason"):
+                print(f"Step {idx} reason: {result['reason']}")
+
             if result.get("status") == "FAIL":
                 return results
+
         return results
