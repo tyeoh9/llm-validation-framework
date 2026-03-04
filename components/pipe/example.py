@@ -37,8 +37,12 @@ def main():
         results = pipe.evaluate(answer)
 
         print("\n" + "=" * 60)
-        for i, r in enumerate(results, start=1):
-            print(f"Step {i}: {r.get('status', '?')} | score={r.get('score', 0):.2f}")
+        for i, (step, r) in enumerate(zip(pipe.steps, results), start=1):
+            step_name = getattr(step, "name", step.__class__.__name__)
+            print(
+                f"Step {i} ({step_name}): "
+                f"{r.get('status', '?')} | score={r.get('score', 0):.2f}"
+            )
         print("=" * 60 + "\n")
 
 

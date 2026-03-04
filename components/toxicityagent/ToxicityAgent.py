@@ -17,6 +17,8 @@ from models import EvaluationResult
 class ToxicityAgent:
     """Toxicity and policy-safety checks with deterministic, model, and semantic layers."""
 
+    name = "ToxicityAgent"
+
     def __init__(self):
         self._detoxify_model = None
         self._sentence_model = None

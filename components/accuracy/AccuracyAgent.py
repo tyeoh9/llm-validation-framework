@@ -18,6 +18,8 @@ from models import EvaluationResult
 class AccuracyAgent:
     """Uses LLM-as-a-judge to check factual accuracy of a statement."""
 
+    name = "AccuracyAgent"
+
     def __init__(self, config_path: str | None = None, max_results: int = 10):
         self.config_path = config_path
         self._online = OnlineData(max_results=max_results)
