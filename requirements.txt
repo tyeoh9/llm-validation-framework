@@ -1,5 +1,6 @@
 # Requires Python 3.11
 
+anthropic
 deepeval>=1.0.0
 litellm
 
