@@ -4,12 +4,11 @@ class Pipe:
     def __init__(self, steps: list):
         self.steps = steps
 
-    def evaluate(self, text: str) -> list[dict]:
-        # Assumes all steps return {"status": "success"/"fail", "score": float}
+    def evaluate(self, payload: dict) -> list[dict]:
         results = []
         for step in self.steps:
-            result = step.evaluate(text)
+            result = step.evaluate(payload)
             results.append(result)
-            if result["status"] == "fail":
+            if result.get("status") == "fail":
                 return results
         return results

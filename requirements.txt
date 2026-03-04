@@ -15,3 +15,5 @@ pypdf
 sentence-transformers
 torch
 transformers
+ddgs
+rank-bm25

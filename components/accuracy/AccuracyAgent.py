@@ -18,7 +18,7 @@ class AccuracyAgent:
 
     def __init__(self, config_path: str | None = None):
         api_key = load_api_key(config_path)
-        model = AnthropicModel(model="claude-3-5-haiku-latest", api_key=api_key)
+        model = AnthropicModel(model="claude-haiku-4-5", api_key=api_key)
 
         self.equivalence_metric = GEval(
             name="Text Equivalence",
