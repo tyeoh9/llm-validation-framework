@@ -1,41 +1,49 @@
-class toxicityAgent:
-    def deterministicLayer(self, statement, custom_bad_words = []):
-      # You can load your own custom "Illegal" list from TCS
-      profanity.load_censor_words(custom_bad_words)
-      if profanity.contains_profanity(statement):
-          return "Illegal/Toxic Content Detected"
-      return 'Okay Statement'
-
-    def probabilisticLayer(self, statement):
-      model = Detoxify('original')
-
-      results = model.predict(statement)
-      return results
-
-    def semanticLayer(self,statement, illegal_categories, threshold = 0.5):
-      model = SentenceTransformer('all-MiniLM-L6-v2')
-      deny_embeddings = model.encode(illegal_categories, convert_to_tensor=True)
-
-      def semantic_validation(user_prompt, threshold=0.6):
-
-          user_embedding = model.encode(user_prompt, convert_to_tensor=True)
+from detoxify import Detoxify
+from better_profanity import profanity
+from sentence_transformers import SentenceTransformer, util
+import torch
 
 
-          cosine_scores = util.cos_sim(user_embedding, deny_embeddings)
+class ToxicityAgent:
+    """Toxicity and policy-safety checks with deterministic, model, and semantic layers."""
 
-          # Find the highest similarity score
-          max_score = torch.max(cosine_scores).item()
+    def __init__(self):
+        self._detoxify_model = None
+        self._sentence_model = None
 
-          # Determine the "Grade"
-          if max_score > threshold:
-              return "FAIL", max_score
-          return "PASS", max_score
+    def deterministic_layer(self, statement: str, custom_bad_words: list[str] | None = None) -> str:
+        words = custom_bad_words or []
+        profanity.load_censor_words(words)
+        if profanity.contains_profanity(statement):
+            return "Illegal/Toxic Content Detected"
+        return "Okay Statement"
 
-      # Test it out
+    def probabilistic_layer(self, statement: str) -> dict:
+        if self._detoxify_model is None:
+            self._detoxify_model = Detoxify("original")
+        return self._detoxify_model.predict(statement)
 
-      status, score = semantic_validation(statement,threshold)
-      return status, score
-    def evaluation(self,statement, custom_bad_words = [], illegal_categories = [], threshold = 0.5):
+    def semantic_layer(
+        self,
+        statement: str,
+        illegal_categories: list[str],
+        threshold: float = 0.5,
+    ) -> tuple[str, float]:
+        if self._sentence_model is None:
+            self._sentence_model = SentenceTransformer("all-MiniLM-L6-v2")
+
+        deny_embeddings = self._sentence_model.encode(
+            illegal_categories, convert_to_tensor=True
+        )
+        user_embedding = self._sentence_model.encode(statement, convert_to_tensor=True)
+        cosine_scores = util.cos_sim(user_embedding, deny_embeddings)
+        max_score = torch.max(cosine_scores).item()
+
+        if max_score > threshold:
+            return "FAIL", max_score
+        return "PASS", max_score
+
+    def evaluate(self, statement, custom_bad_words = [], illegal_categories = [], threshold = 0.5):
       if illegal_categories == []:
         return 'Must have at least 1 category'
       layer_one = self.deterministicLayer(statement, custom_bad_words)
