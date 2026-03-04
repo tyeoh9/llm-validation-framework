@@ -43,6 +43,8 @@ class AccuracyAgent:
 
     def find_evidence(self, query: str) -> str:
         """Retrieve external evidence for a query (currently via OnlineData only)."""
+
+        # TODO: Implement mechanism to retrieve either online or RAG evidence
         body, href = self._online.search(query)
         return f"[Source: {href}]\n{body}"
 
