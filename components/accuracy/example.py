@@ -11,14 +11,14 @@ if __name__ == "__main__":
     text2 = "A cat was sitting on the mat."
     result = agent.evaluate(text1, text2)
 
-    print(f"Score: {result['score']}")
-    print(f"Reason: {result['reason']}\n")
+    print(f"Status: {result['status']}")
+    print(f"Score: {result['score']}\n")
 
     # Example 2: Evaluate two different texts
     text3 = "The weather is sunny today."
     text4 = "I went to the store to buy groceries."
     result2 = agent.evaluate(text3, text4)
 
+    print(f"Status: {result2['status']}")
     print(f"Score: {result2['score']}")
-    print(f"Reason: {result2['reason']}")
 
