@@ -12,6 +12,7 @@ if str(ROOT) not in sys.path:
 
 from config_loader import load_api_key
 from components.onlinedata.OnlineData import OnlineData
+from models import EvaluationResult
 
 
 class AccuracyAgent:
@@ -43,12 +44,11 @@ class AccuracyAgent:
 
     def find_evidence(self, query: str) -> str:
         """Retrieve external evidence for a query (currently via OnlineData only)."""
-
         # TODO: Implement mechanism to retrieve either online or RAG evidence
         body, href = self._online.search(query)
         return f"[Source: {href}]\n{body}"
 
-    def evaluate(self, text: str) -> dict:
+    def evaluate(self, text: str) -> EvaluationResult:
         """Evaluate a single text against external evidence."""
         evidence = self.find_evidence(text)
 
