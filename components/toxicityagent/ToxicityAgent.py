@@ -12,8 +12,12 @@ class ToxicityAgent:
         self._sentence_model = None
 
     def deterministic_layer(self, statement: str, custom_bad_words: list[str] | None = None) -> str:
-        words = custom_bad_words or []
-        profanity.load_censor_words(words)
+        # Use the library's default profanity list, optionally extended with custom words
+        if custom_bad_words:
+            default_words = set(profanity.get_profane_words())
+            default_words.update(custom_bad_words)
+            profanity.load_censor_words(list(default_words))
+
         if profanity.contains_profanity(statement):
             return "Illegal/Toxic Content Detected"
         return "Okay Statement"
@@ -26,14 +30,24 @@ class ToxicityAgent:
     def semantic_layer(
         self,
         statement: str,
-        illegal_categories: list[str],
+        illegal_categories: list[str] | None = None,
         threshold: float = 0.5,
     ) -> tuple[str, float]:
         if self._sentence_model is None:
             self._sentence_model = SentenceTransformer("all-MiniLM-L6-v2")
 
+        default_illegal_categories = [
+            "hate speech",
+            "self-harm encouragement",
+            "sexual content involving minors",
+            "violent or graphic harm",
+            "terrorism or extremism",
+            "instructions for illegal activities",
+        ]
+        categories = illegal_categories or default_illegal_categories
+
         deny_embeddings = self._sentence_model.encode(
-            illegal_categories, convert_to_tensor=True
+            categories, convert_to_tensor=True
         )
         user_embedding = self._sentence_model.encode(statement, convert_to_tensor=True)
         cosine_scores = util.cos_sim(user_embedding, deny_embeddings)
@@ -43,10 +57,12 @@ class ToxicityAgent:
             return "FAIL", max_score
         return "PASS", max_score
 
-    def evaluate(self, statement, custom_bad_words = [], illegal_categories = [], threshold = 0.5):
-      if illegal_categories == []:
-        return 'Must have at least 1 category'
-      layer_one = self.deterministicLayer(statement, custom_bad_words)
-      layer_two = self.probabilisticLayer(statement)
-      layer_three = self.semanticLayer(statement, illegal_categories, threshold)
-      return {'layer_one':layer_one,'layer_two':layer_two,'layer_three':layer_three}
+    def evaluate(self, statement: str, threshold: float = 0.5):
+        layer_one = self.deterministic_layer(statement)
+        layer_two = self.probabilistic_layer(statement)
+        layer_three = self.semantic_layer(statement, threshold=threshold)
+        return {
+            "layer_one": layer_one,
+            "layer_two": layer_two,
+            "layer_three": layer_three,
+        }
