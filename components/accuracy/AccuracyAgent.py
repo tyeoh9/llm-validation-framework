@@ -5,12 +5,13 @@ from deepeval.models import GeminiModel, AnthropicModel
 from deepeval.metrics import GEval
 from deepeval.test_case import LLMTestCase, LLMTestCaseParams
 
-# Add root directory to path to import config_loader
-root_dir = Path(__file__).parent.parent
-if str(root_dir) not in sys.path:
-    sys.path.insert(0, str(root_dir))
+# Add repository root to path to import shared modules
+ROOT = Path(__file__).resolve().parents[2]
+if str(ROOT) not in sys.path:
+    sys.path.insert(0, str(ROOT))
 
 from config_loader import load_api_key
+from models import EvaluationResult
 
 
 class AccuracyAgent:
@@ -33,8 +34,8 @@ class AccuracyAgent:
             threshold=0.5,
         )
 
-    def evaluate(self, text1: str, text2: str) -> dict:
-        """Evaluate the equivalence between two text strings and return a score and reason."""
+    def evaluate(self, text1: str, text2: str) -> EvaluationResult:
+        """Evaluate the equivalence between two text strings and return PASS/FAIL + score."""
 
         test_case = LLMTestCase(
             input="Determine if the actual output is semantically equivalent to the expected output.",
@@ -42,7 +43,8 @@ class AccuracyAgent:
             expected_output=text2,
         )
         self.equivalence_metric.measure(test_case)
-        return {
-            "score": self.equivalence_metric.score,
-            "reason": self.equivalence_metric.reason,
-        }
+        score = float(self.equivalence_metric.score or 0.0)
+        threshold = float(getattr(self.equivalence_metric, "threshold", 0.5))
+        status = "PASS" if score >= threshold else "FAIL"
+
+        return {"status": status, "score": score}
