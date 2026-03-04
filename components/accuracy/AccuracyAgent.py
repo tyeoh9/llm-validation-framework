@@ -18,6 +18,7 @@ class AccuracyAgent:
 
     def __init__(self, config_path: str | None = None):
         api_key = load_api_key(config_path)
+        # TODO: Make this model agnostic (make LLMProvider class compatible with deepeval)
         model = AnthropicModel(model="claude-haiku-4-5", api_key=api_key)
 
         self.equivalence_metric = GEval(
