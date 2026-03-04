@@ -8,18 +8,15 @@ if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
 from components.pipe.Pipe import Pipe
-from components.pipe.steps.toxicity_layer import ToxicityStep
-from components.pipe.steps.accuracy_layer import AccuracyStep
+from components.toxicityagent.ToxicityAgent import ToxicityAgent
+from components.accuracy.AccuracyAgent import AccuracyAgent
 
 
 def main():
-    toxicity_step = ToxicityStep(
-        illegal_categories=["Do not allow illegal substances to be mentioned."],
-        semantic_threshold=0.5,
-    )
-    accuracy_step = AccuracyStep(rag_k=5, config_path=None)
+    toxicity_agent = ToxicityAgent()
+    accuracy_agent = AccuracyAgent(config_path=None)
 
-    pipe = Pipe(steps=[toxicity_step, accuracy_step])
+    pipe = Pipe(steps=[toxicity_agent, accuracy_agent])
 
     print("Validation pipeline: enter LLM input (question) and LLM output (answer).")
     print("Type 'exit' to quit.\n")
@@ -36,8 +33,8 @@ def main():
             print("Skipping (empty answer).\n")
             continue
 
-        payload = {"question": question, "answer": answer}
-        results = pipe.evaluate(payload)
+        # For now, the pipeline operates only on the LLM answer text.
+        results = pipe.evaluate(answer)
 
         print("\n" + "=" * 60)
         for i, r in enumerate(results, start=1):
