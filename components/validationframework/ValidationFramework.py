@@ -1,7 +1,7 @@
 
 # from ragprovider import RAGProvider
-from llmprovider import LLMProvider
-from pipe import Pipe
+from components.llmprovider.LLMProvider import LLMProvider
+from components.pipe.Pipe import Pipe
 from models import EvaluationResult, GuardrailSummary, ValidationSummary
 
 # TODO: Integrate RAG component once RAGProvider class has been implemented
