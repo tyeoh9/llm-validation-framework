@@ -2,7 +2,7 @@ from typing import Literal, NotRequired, TypedDict
 
 
 class EvaluationResult(TypedDict):
-    status: Literal["PASS", "FAIL"]
+    status: Literal["PASS", "FAIL", "TIMEOUT"]
     score: float
     reason: NotRequired[str]
 
