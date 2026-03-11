@@ -54,7 +54,6 @@ class ValidationFramework:
             "score": final_score,
         }
 
-
     def _check_failure(self, results: list[EvaluationResult]) -> str:
         """Checks for failures/timeouts in this guardrail output."""
         for r in results:
