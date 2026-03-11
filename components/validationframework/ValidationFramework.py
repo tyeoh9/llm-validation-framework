@@ -2,6 +2,7 @@
 # from ragprovider import RAGProvider
 from llmprovider import LLMProvider
 from pipe import Pipe
+from models import EvaluationResult, GuardrailSummary, ValidationSummary
 
 # TODO: Integrate RAG component once RAGProvider class has been implemented
 
@@ -14,42 +15,62 @@ class ValidationFramework:
         self.input_guardrail = input_guardrail
         self.output_guardrail = output_guardrail
 
-    '''
-    example of 'results' from Pipe class
-    [
-        {'status': 'PASS', 'score': 0.9761367253959179},
-        {'status': 'FAIL',
-        'score': 0.0,
-        'reason': 'The actual output factually contradicts the expected output: it '
-                    "claims Shanghai is China's capital when the evidence text only "
-                    "describes Shanghai's financial and economic significance without "
-                    "mentioning it as a capital, and Beijing is actually China's "
-                    'capital.'}
-    ]
-    '''
+    def validate(self, query: str) -> ValidationSummary:
+        """Run input guardrail -> LLM -> output guardrail and return structured results."""
+        input_results = self.input_guardrail.evaluate(query)
+        input_summary = self._summarize_results(input_results)
 
-    def validate(self, query: str):
-        # TODO: Return metrics/scores rather than just PASS/FAIL message
-        
-        # 1. Validate input
-        input_guard_result = self._check_failure(query)
-        if input_guard_result == "FAIL":
-            return "Validation failed at input guardrail"
+        if input_summary["status"] == "FAIL":
+            output_summary: GuardrailSummary = {
+                "status": "FAIL",
+                "score": 0.0,
+                "reason": "Skipped: input guardrail failed",
+                "results": [],
+            }
+            final_score = (input_summary["score"] + output_summary["score"]) / 2.0
+            return {
+                "input": input_summary,
+                "output": output_summary,
+                "status": "FAIL",
+                "score": final_score,
+            }
 
-        # 2. Call LLM
         response = self.llm.call_api(query)
 
-        # 3. Validate output
-        output_guard_result = self._check_failure(response)
-        if output_guard_result == "FAIL":
-            return "Validation failed at output guardrail"
+        output_results = self.output_guardrail.evaluate(response)
+        output_summary = self._summarize_results(output_results)
 
-        return "Validation passed!"
+        final_status = (
+            "PASS"
+            if input_summary["status"] == "PASS" and output_summary["status"] == "PASS"
+            else "FAIL"
+        )
+        final_score = (input_summary["score"] + output_summary["score"]) / 2.0
+
+        return {
+            "input": input_summary,
+            "output": output_summary,
+            "status": final_status,
+            "score": final_score,
+        }
 
 
-    def _check_failure(self, results: list[dict]) -> str:
-        """Checks for failures/timeouts in this guardrail output"""
+    def _check_failure(self, results: list[EvaluationResult]) -> str:
+        """Checks for failures/timeouts in this guardrail output."""
         for r in results:
             if r["status"] in ("FAIL", "TIMEOUT"):
                 return "FAIL"
         return "PASS"
+
+    def _average_score(self, results: list[EvaluationResult]) -> float:
+        if not results:
+            return 0.0
+        total = 0.0
+        for r in results:
+            total += float(r.get("score", 0.0))
+        return total / len(results)
+
+    def _summarize_results(self, results: list[EvaluationResult]) -> GuardrailSummary:
+        status = "FAIL" if self._check_failure(results) == "FAIL" else "PASS"
+        score = self._average_score(results)
+        return {"status": status, "score": score, "results": results}
