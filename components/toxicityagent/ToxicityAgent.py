@@ -89,7 +89,6 @@ class ToxicityAgent:
             0.4 * sem_result["score"]
         )
 
-        fail = any(r["status"] == "FAIL" for r in (det_result, prob_result, sem_result))
-        status = "FAIL" if fail else "PASS"
+        status = "FAIL" if risk_score < threshold else "PASS"
 
         return {"status": status, "score": float(risk_score)}
