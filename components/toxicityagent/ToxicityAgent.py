@@ -83,10 +83,10 @@ class ToxicityAgent:
         sem_result = self.semantic_layer(statement, threshold=threshold)
 
         # 1.0 means no risk, 0.0 means high risk
-        risk_score = 1.0 - max(
-            float(det_result["score"]),
-            float(prob_result["score"]),
-            float(sem_result["score"]),
+        risk_score = 1.0 - (
+            0.2 * det_result["score"] +
+            0.4 * prob_result["score"] +
+            0.4 * sem_result["score"]
         )
 
         fail = any(r["status"] == "FAIL" for r in (det_result, prob_result, sem_result))
