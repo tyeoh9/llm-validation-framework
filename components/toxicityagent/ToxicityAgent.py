@@ -20,7 +20,7 @@ from models import EvaluationResult
 class ToxicityAgent:
     """Toxicity and policy-safety checks with deterministic, model, and semantic layers."""
 
-    name = "ToxicityAgent"
+    name = "Harmful content check"
 
     def __init__(self):
         self._detoxify_model = None
@@ -77,18 +77,25 @@ class ToxicityAgent:
         status = "FAIL" if max_score > threshold else "PASS"
         return {"status": status, "score": float(max_score)}
 
-    def evaluate(self, statement: str, threshold: float = 0.5) -> EvaluationResult:
+    def evaluate(self, statement: str, threshold: float = 0.5, on_progress=None) -> EvaluationResult:
+        if on_progress: on_progress("Scanning for explicit language...")
         det_result = self.deterministic_layer(statement)
+        if on_progress: on_progress("Running toxicity model...")
         prob_result = self.probabilistic_layer(statement, threshold=threshold)
+        if on_progress: on_progress("Checking semantic similarity...")
         sem_result = self.semantic_layer(statement, threshold=threshold)
 
         # 1.0 means no risk, 0.0 means high risk
-        risk_score = 1.0 - (
-            0.2 * det_result["score"] +
-            0.4 * prob_result["score"] +
-            0.4 * sem_result["score"]
+        risk_score = 1.0 - max(
+            float(det_result["score"]),
+            float(prob_result["score"]),
+            float(sem_result["score"]),
         )
 
-        status = "FAIL" if risk_score < threshold else "PASS"
+        # print(f"deterministic layer: {det_result['score']}")
+        # print(f"probabilistic layer: {prob_result['score']}")
+        # print(f"semantic layer: {sem_result['score']}")
 
+        fail = any(r["status"] == "FAIL" for r in (det_result, prob_result, sem_result))
+        status = "FAIL" if fail else "PASS"
         return {"status": status, "score": float(risk_score)}

@@ -374,6 +374,24 @@
     opacity: 0.9;
   }
   
+  /* Running / streaming state */
+
+  @keyframes pulse {
+    0%, 100% { opacity: 1; transform: scale(1); }
+    50% { opacity: 0.35; transform: scale(0.7); }
+  }
+
+  .timeline-dot.running {
+    border-color: rgba(56, 189, 248, 0.9);
+    background: radial-gradient(circle at 30% 20%, #bae6fd, #38bdf8);
+    animation: pulse 1.1s ease-in-out infinite;
+  }
+
+  .badge-running {
+    border-color: rgba(56, 189, 248, 0.5);
+    color: var(--accent);
+  }
+
   /* Responsive */
   
   @media (max-width: 900px) {
