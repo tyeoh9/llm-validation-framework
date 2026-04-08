@@ -98,5 +98,4 @@ class ToxicityAgent:
 
         fail = any(r["status"] == "FAIL" for r in (det_result, prob_result, sem_result))
         status = "FAIL" if fail else "PASS"
-
         return {"status": status, "score": float(risk_score)}

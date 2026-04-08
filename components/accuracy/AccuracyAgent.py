@@ -32,7 +32,8 @@ class AccuracyAgent:
             name="Text Equivalence",
             evaluation_steps=[
                 "Check whether the facts in 'actual output' contradicts any facts in 'expected output'",
-                "Contradicting opinions are OK but contradict facts are not."
+                "Contradicting opinions are OK but contradict facts are not.",
+                "The reasoning should sacrifice grammar for concision - one sentence only."
             ],
             evaluation_params=[
                 LLMTestCaseParams.INPUT,
