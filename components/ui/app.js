@@ -23,67 +23,83 @@ function addMessage(role, text) {
   chatWindow.scrollTop = chatWindow.scrollHeight;
 }
 
-// Utility: render pipeline results on the right
-function renderPipeline(results) {
-  pipelineStepsEl.innerHTML = "";
+// Add a step row in "running" state
+function addStepRunning(stepNum, name) {
+  const li = document.createElement("li");
+  li.className = "timeline-item";
+  li.id = `step-${stepNum}`;
 
-  results.forEach((step, index) => {
-    const li = document.createElement("li");
-    li.className = "timeline-item";
+  const dot = document.createElement("div");
+  dot.className = "timeline-dot running";
 
-    const dot = document.createElement("div");
-    dot.className = "timeline-dot";
-    if (step.status === "success") dot.classList.add("success");
-    if (step.status === "fail") dot.classList.add("fail");
+  const content = document.createElement("div");
+  content.className = "timeline-content";
 
-    const content = document.createElement("div");
-    content.className = "timeline-content";
+  const header = document.createElement("div");
+  header.className = "timeline-header";
 
-    const header = document.createElement("div");
-    header.className = "timeline-header";
+  const title = document.createElement("div");
+  title.className = "timeline-title";
+  title.textContent = `${stepNum}. ${name}`;
 
-    const title = document.createElement("div");
-    title.className = "timeline-title";
-    title.textContent = `${index + 1}. ${step.name}`;
+  const meta = document.createElement("div");
+  meta.className = "timeline-meta";
 
-    const meta = document.createElement("div");
-    meta.className = "timeline-meta";
+  const badge = document.createElement("span");
+  badge.className = "badge badge-running";
+  badge.textContent = "Running";
 
-    const badge = document.createElement("span");
-    badge.className = "badge";
-    if (step.status === "success") {
-      badge.classList.add("badge-ok");
-      badge.textContent = "Pass";
-    } else if (step.status === "fail") {
-      badge.classList.add("badge-fail");
-      badge.textContent = "Fail";
-    } else {
-      badge.textContent = step.status || "Pending";
-    }
+  meta.appendChild(badge);
+  header.appendChild(title);
+  header.appendChild(meta);
+  content.appendChild(header);
+  li.appendChild(dot);
+  li.appendChild(content);
+  pipelineStepsEl.appendChild(li);
+}
 
-    const score = document.createElement("span");
-    score.className = "timeline-score";
-    if (typeof step.score === "number") {
-      score.textContent = `Score: ${step.score.toFixed(2)}`;
-    }
+// Resolve a running step with its final result
+function resolveStep(stepNum, name, status, score, reason) {
+  const li = document.getElementById(`step-${stepNum}`);
+  if (!li) return;
 
-    meta.appendChild(badge);
-    if (score.textContent) meta.appendChild(score);
+  // Restore the human-friendly step name now that thinking is done
+  li.querySelector(".timeline-title").textContent = name;
 
-    header.appendChild(title);
-    header.appendChild(meta);
+  const uiStatus = mapStatus(status);
+  const dot = li.querySelector(".timeline-dot");
+  dot.classList.remove("running");
+  if (uiStatus === "success") dot.classList.add("success");
+  if (uiStatus === "fail") dot.classList.add("fail");
 
-    const reason = document.createElement("div");
-    reason.className = "timeline-reason";
-    reason.textContent = step.reason || "";
+  const meta = li.querySelector(".timeline-meta");
+  meta.innerHTML = "";
 
-    content.appendChild(header);
-    if (reason.textContent) content.appendChild(reason);
+  const badge = document.createElement("span");
+  badge.className = "badge";
+  if (uiStatus === "success") {
+    badge.classList.add("badge-ok");
+    badge.textContent = "Pass";
+  } else if (uiStatus === "fail") {
+    badge.classList.add("badge-fail");
+    badge.textContent = "Fail";
+  } else {
+    badge.textContent = status || "Unknown";
+  }
 
-    li.appendChild(dot);
-    li.appendChild(content);
-    pipelineStepsEl.appendChild(li);
-  });
+  const scoreEl = document.createElement("span");
+  scoreEl.className = "timeline-score";
+  scoreEl.textContent = `Score: ${score.toFixed(2)}`;
+
+  meta.appendChild(badge);
+  meta.appendChild(scoreEl);
+
+  if (reason) {
+    const reasonEl = document.createElement("div");
+    reasonEl.className = "timeline-reason";
+    reasonEl.textContent = reason;
+    li.querySelector(".timeline-content").appendChild(reasonEl);
+  }
 }
 
 const API_BASE = "http://127.0.0.1:5050"; // match: uvicorn api_server:app --port 5050
@@ -95,53 +111,57 @@ function mapStatus(apiStatus) {
   return "pending";
 }
 
-async function runValidation(question, answer) {
-  const res = await fetch(`${API_BASE}/validate`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ question, answer }),
-  });
-  if (!res.ok) throw new Error(await res.text());
-  const data = await res.json();
+let activeStream = null;
 
-  const now = new Date();
-  lastRunEl.textContent = now.toLocaleTimeString([], {
-    hour: "2-digit",
-    minute: "2-digit",
-  });
-  overallScoreEl.textContent =
-    typeof data.overall_score === "number"
-      ? data.overall_score.toFixed(2)
-      : "-";
+function runValidation(question, answer) {
+  if (activeStream) activeStream.close();
 
-  const steps = (data.steps || []).map((s) => ({
-    name: s.name,
-    status: mapStatus(s.status),
-    score: s.score,
-    reason: s.reason || "",
-  }));
-  renderPipeline(steps);
+  pipelineStepsEl.innerHTML = "";
+  overallScoreEl.textContent = "–";
+  lastRunEl.textContent = "Running…";
+
+  const params = new URLSearchParams({ question, answer });
+  const es = new EventSource(`${API_BASE}/validate/stream?${params}`);
+  activeStream = es;
+
+  es.onmessage = (e) => {
+    const msg = JSON.parse(e.data);
+
+    if (msg.type === "step_start") {
+      addStepRunning(msg.step, msg.name);
+    } else if (msg.type === "step_phase") {
+      const li = document.getElementById(`step-${msg.step}`);
+      if (li) li.querySelector(".timeline-title").textContent = msg.message;
+    } else if (msg.type === "step_done") {
+      resolveStep(msg.step, msg.name, msg.status, msg.score, msg.reason);
+    } else if (msg.type === "done") {
+      overallScoreEl.textContent =
+        typeof msg.overall_score === "number"
+          ? msg.overall_score.toFixed(2)
+          : "–";
+      lastRunEl.textContent = new Date().toLocaleTimeString([], {
+        hour: "2-digit",
+        minute: "2-digit",
+      });
+      es.close();
+      activeStream = null;
+    }
+  };
+
+  es.onerror = () => {
+    lastRunEl.textContent = "Error";
+    es.close();
+    activeStream = null;
+  };
 }
 
-chatForm.addEventListener("submit", async (e) => {
+chatForm.addEventListener("submit", (e) => {
   e.preventDefault();
 
   const question = questionInput.value.trim();
   const answer = answerInput.value.trim();
   if (!question || !answer) return;
 
-  addMessage(
-    "user",
-    `Q: ${question}\nA: ${answer}`
-  );
-
-  try {
-    await runValidation(question, answer);
-  } catch (err) {
-    const msg = err instanceof Error ? err.message : String(err);
-    addMessage("system", `Validation failed: ${msg}. Is the API running? (uvicorn api_server:app --port 5050)`);
-    overallScoreEl.textContent = "–";
-    lastRunEl.textContent = "Error";
-    pipelineStepsEl.innerHTML = "";
-  }
+  addMessage("user", `Q: ${question}\nA: ${answer}`);
+  runValidation(question, answer);
 });

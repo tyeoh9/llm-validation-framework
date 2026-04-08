@@ -18,7 +18,7 @@ from models import EvaluationResult
 class AccuracyAgent:
     """Uses LLM-as-a-judge to check factual accuracy of a statement."""
 
-    name = "AccuracyAgent"
+    name = "Factual accuracy check"
 
     def __init__(self, config_path: str | None = None, max_results: int = 10):
         self.config_path = config_path
@@ -49,9 +49,11 @@ class AccuracyAgent:
         body, href = self._online.search(query)
         return f"[Source: {href}]\n{body}"
 
-    def evaluate(self, text: str) -> EvaluationResult:
+    def evaluate(self, text: str, on_progress=None) -> EvaluationResult:
         """Evaluate a single text against external evidence."""
+        if on_progress: on_progress("Fetching supporting evidence...")
         evidence = self.find_evidence(text)
+        if on_progress: on_progress("Consulting judge model...")
 
         test_case = LLMTestCase(
             input="Determine if the actual output is semantically consistent with the evidence text.",
