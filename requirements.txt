@@ -19,3 +19,6 @@ pypdf
 sentence-transformers
 torch
 transformers
+flask
+uvicorn
+fastapi

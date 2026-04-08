@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>LLM Validation Playground</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link rel="stylesheet" href="./styles.css" />
+</head>
+<body>
+  <div class="app-shell">
+    <!-- Left: Chat panel -->
+    <section class="panel chat-panel">
+      <header class="panel-header">
+        <div class="panel-title">
+          <span class="pill pill-primary"></span>
+          <h1>LLM Chat</h1>
+        </div>
+        <p class="panel-subtitle">Draft answers to validate.</p>
+      </header>
+
+      <div id="chat-window" class="chat-window">
+        <!-- Example intro messages -->
+        <div class="message-row system">
+          <div class="message-bubble">
+            <p>Welcome! Ask a question and paste the LLM’s answer below to run it through the validation pipeline.</p>
+          </div>
+        </div>
+      </div>
+
+      <form id="chat-form" class="chat-input-row">
+        <div class="chat-inputs">
+          <textarea
+            id="question-input"
+            class="input question-input"
+            placeholder="LLM input (question)..."
+            rows="2"
+          ></textarea>
+          <textarea
+            id="answer-input"
+            class="input answer-input"
+            placeholder="LLM output (answer)..."
+            rows="3"
+          ></textarea>
+        </div>
+        <button type="submit" class="btn-primary">
+          Validate
+        </button>
+      </form>
+    </section>
+
+    <!-- Right: Validation pipeline panel -->
+    <section class="panel pipeline-panel">
+      <header class="panel-header">
+        <div class="panel-title">
+          <span class="pill pill-accent"></span>
+          <h1>Validation Pipeline</h1>
+        </div>
+        <p class="panel-subtitle">Multi-layer checks on the LLM answer.</p>
+      </header>
+
+      <div class="pipeline-summary">
+        <div class="summary-item">
+          <span class="summary-label">Overall score</span>
+          <span id="overall-score" class="summary-value">–</span>
+        </div>
+        <div class="summary-item">
+          <span class="summary-label">Last run</span>
+          <span id="last-run" class="summary-value">No runs yet</span>
+        </div>
+      </div>
+
+      <ol id="pipeline-steps" class="timeline">
+        <!-- Steps will be populated by JS -->
+      </ol>
+    </section>
+  </div>
+
+  <script src="./app.js?v=3"></script>
+</body>
+</html>
