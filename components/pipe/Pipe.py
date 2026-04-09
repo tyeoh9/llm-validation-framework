@@ -5,8 +5,9 @@ class Pipe:
     `Pipe.evaluate(data)` is forwarded unchanged to each step's `evaluate`.
     """
 
-    def __init__(self, steps: list):
+    def __init__(self, steps: list, verbose: bool = True):
         self.steps = steps
+        self.verbose = verbose
 
     def evaluate(self, data) -> list[dict]:
         results = []
@@ -14,8 +15,11 @@ class Pipe:
             result = step.evaluate(data)
             results.append(result)
 
-            if result.get("reason"):
+            if self.verbose and result.get("reason"):
                 print(f"Step {idx} reason: {result['reason']}")
+            elif result.get("reason"):
+                print(f"Reason: {result['reason']}")
+
 
             if result.get("status") == "FAIL":
                 return results
