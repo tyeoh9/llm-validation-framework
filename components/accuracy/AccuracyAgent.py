@@ -1,5 +1,10 @@
+import os
 import sys
+import warnings
 from pathlib import Path
+
+os.environ.setdefault("TRANSFORMERS_VERBOSITY", "error")
+warnings.filterwarnings("ignore")
 
 from deepeval.metrics import GEval
 from deepeval.test_case import LLMTestCase, LLMTestCaseParams
@@ -42,6 +47,7 @@ class AccuracyAgent:
             ],
             model=model,
             threshold=0.5,
+            verbose_mode=False,
         )
 
     def find_evidence(self, query: str) -> str:
