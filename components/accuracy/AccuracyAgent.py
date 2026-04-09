@@ -1,7 +1,6 @@
 import sys
 from pathlib import Path
 
-from deepeval.models import GeminiModel, AnthropicModel
 from deepeval.metrics import GEval
 from deepeval.test_case import LLMTestCase, LLMTestCaseParams
 
@@ -12,6 +11,7 @@ if str(ROOT) not in sys.path:
 
 from config_loader import load_api_key
 from components.onlinedata.OnlineData import OnlineData
+from components.llmprovider.LLMProvider import LLMProvider, DeepEvalLLMProvider
 from models import EvaluationResult
 
 
@@ -25,8 +25,8 @@ class AccuracyAgent:
         self._online = OnlineData(max_results=max_results)
 
         api_key = load_api_key(config_path)
-        # TODO: Make this model agnostic (make LLMProvider class compatible with deepeval)
-        model = AnthropicModel(model="claude-haiku-4-5", api_key=api_key)
+        llm_provider = LLMProvider(provider="anthropic", model="claude-haiku-4-5-20251001", key=api_key)
+        model = DeepEvalLLMProvider(llm_provider)
 
         self.equivalence_metric = GEval(
             name="Text Equivalence",

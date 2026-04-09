@@ -1,4 +1,6 @@
 import litellm
+from deepeval.models.base_model import DeepEvalBaseLLM
+
 
 class LLMProvider:
     """
@@ -17,3 +19,22 @@ class LLMProvider:
             api_key=self.key
         )
         return response.choices[0].message.content
+
+
+class DeepEvalLLMProvider(DeepEvalBaseLLM):
+    """Adapter that makes LLMProvider compatible with deepeval metrics."""
+
+    def __init__(self, llm_provider: LLMProvider):
+        self._provider = llm_provider
+
+    def get_model_name(self) -> str:
+        return self._provider.model_string
+
+    def load_model(self):
+        return self._provider
+
+    def generate(self, prompt: str) -> str:
+        return self._provider.call_api(prompt)
+
+    async def a_generate(self, prompt: str) -> str:
+        return self.generate(prompt)
