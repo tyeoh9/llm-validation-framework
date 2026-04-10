@@ -36,7 +36,7 @@ class PrivacyAgent:
       return text
   
   #Custom censor where the client can choose what words or regex expressions to replace as well as their replacements
-  def custom_regex_censor(self,text,bad_words,replacements):
+  def custom_regex_censor(self,text,bad_words = [],replacements = []):
     if len(bad_words) != len(replacements):
       raise ValueError("bad_words and replacements must be the same length in custom_regex_censor")
     
@@ -46,7 +46,7 @@ class PrivacyAgent:
     return text
   
   #Combines the top 3 into one method for ease of use
-  def complete_censor(self,text,bad_words=None,replacements=None):
+  def complete_censor(self,text,bad_words=[],replacements=[]):
     text = self.preliminary_censor(text)
     text = self.in_depth_censor(text)
     text = self.custom_regex_censor(text,bad_words,replacements)
