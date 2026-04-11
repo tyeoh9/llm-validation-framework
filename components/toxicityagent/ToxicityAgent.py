@@ -1,6 +1,9 @@
+import os
 import sys
 import logging
 from pathlib import Path
+
+os.environ.setdefault("HF_HUB_DISABLE_PROGRESS_BARS", "1")
 
 from detoxify import Detoxify
 from better_profanity import profanity
@@ -13,6 +16,7 @@ if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
 logging.getLogger("transformers").setLevel(logging.ERROR)
+logging.getLogger("huggingface_hub").setLevel(logging.ERROR)
 
 from models import EvaluationResult
 
