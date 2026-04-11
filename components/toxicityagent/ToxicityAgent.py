@@ -52,7 +52,7 @@ class ToxicityAgent:
         self,
         statement: str,
         illegal_categories: list[str] | None = None,
-        threshold: float = 0.5,
+        threshold: float = 0.1,
     ) -> EvaluationResult:
         if self._sentence_model is None:
             self._sentence_model = SentenceTransformer("all-MiniLM-L6-v2")
