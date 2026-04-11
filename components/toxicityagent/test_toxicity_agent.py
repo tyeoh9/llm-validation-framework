@@ -1,5 +1,5 @@
 import pytest
-from toxicity_agent import ToxicityAgent
+from ToxicityAgent import ToxicityAgent
 
 @pytest.fixture
 def agent():
