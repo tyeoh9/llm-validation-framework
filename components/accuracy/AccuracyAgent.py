@@ -56,8 +56,9 @@ class AccuracyAgent:
         body, href = self._online.search(query)
         return f"[Source: {href}]\n{body}"
 
-    def evaluate(self, text: str, on_progress=None) -> EvaluationResult:
+    def evaluate(self, data, on_progress=None) -> EvaluationResult:
         """Evaluate a single text against external evidence."""
+        text = data["answer"] if isinstance(data, dict) else data
         if on_progress: on_progress("Fetching supporting evidence...")
         evidence = self.find_evidence(text)
         if on_progress: on_progress("Consulting judge model...")

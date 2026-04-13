@@ -1,15 +1,52 @@
-// Minimal front-end wiring.
-// Right now, it fakes validation results; later you can call your backend here.
-
 const chatWindow = document.getElementById("chat-window");
-const chatForm = document.getElementById("chat-form");
-const questionInput = document.getElementById("question-input");
-const answerInput = document.getElementById("answer-input");
 const pipelineStepsEl = document.getElementById("pipeline-steps");
 const overallScoreEl = document.getElementById("overall-score");
 const lastRunEl = document.getElementById("last-run");
+const panelSubtitle = document.getElementById("panel-subtitle");
 
-// Utility: append a message bubble
+// Mode toggle elements
+const btnChatMode = document.getElementById("btn-chat-mode");
+const btnManualMode = document.getElementById("btn-manual-mode");
+const chatForm = document.getElementById("chat-form");
+const manualForm = document.getElementById("manual-form");
+
+// Chat mode inputs
+const questionInput = document.getElementById("question-input");
+const sendBtn = document.getElementById("send-btn");
+
+// Manual mode inputs
+const manualQuestionInput = document.getElementById("manual-question-input");
+const manualAnswerInput = document.getElementById("manual-answer-input");
+
+const API_BASE = "http://127.0.0.1:5050";
+
+let activeStream = null;
+let currentMode = "chat";
+
+// ── Mode toggle ──
+
+btnChatMode.addEventListener("click", () => switchMode("chat"));
+btnManualMode.addEventListener("click", () => switchMode("manual"));
+
+function switchMode(mode) {
+  currentMode = mode;
+  if (mode === "chat") {
+    btnChatMode.classList.add("active");
+    btnManualMode.classList.remove("active");
+    chatForm.classList.remove("hidden");
+    manualForm.classList.add("hidden");
+    panelSubtitle.textContent = "Ask a question and watch the LLM respond.";
+  } else {
+    btnManualMode.classList.add("active");
+    btnChatMode.classList.remove("active");
+    manualForm.classList.remove("hidden");
+    chatForm.classList.add("hidden");
+    panelSubtitle.textContent = "Paste a question and answer to validate.";
+  }
+}
+
+// ── Chat bubbles ──
+
 function addMessage(role, text) {
   const row = document.createElement("div");
   row.className = `message-row ${role}`;
@@ -23,7 +60,41 @@ function addMessage(role, text) {
   chatWindow.scrollTop = chatWindow.scrollHeight;
 }
 
-// Add a step row in "running" state
+function addStreamingBubble() {
+  const row = document.createElement("div");
+  row.className = "message-row assistant";
+
+  const bubble = document.createElement("div");
+  bubble.className = "message-bubble";
+
+  const cursor = document.createElement("span");
+  cursor.className = "streaming-cursor";
+
+  bubble.appendChild(cursor);
+  row.appendChild(bubble);
+  chatWindow.appendChild(row);
+  chatWindow.scrollTop = chatWindow.scrollHeight;
+
+  return bubble;
+}
+
+function appendToken(bubble, token) {
+  const cursor = bubble.querySelector(".streaming-cursor");
+  if (cursor) {
+    bubble.insertBefore(document.createTextNode(token), cursor);
+  } else {
+    bubble.appendChild(document.createTextNode(token));
+  }
+  chatWindow.scrollTop = chatWindow.scrollHeight;
+}
+
+function finishStreaming(bubble) {
+  const cursor = bubble.querySelector(".streaming-cursor");
+  if (cursor) cursor.remove();
+}
+
+// ── Validation pipeline (shared by both modes) ──
+
 function addStepRunning(stepNum, name) {
   const li = document.createElement("li");
   li.className = "timeline-item";
@@ -58,12 +129,17 @@ function addStepRunning(stepNum, name) {
   pipelineStepsEl.appendChild(li);
 }
 
-// Resolve a running step with its final result
+function mapStatus(apiStatus) {
+  const s = String(apiStatus || "").toUpperCase();
+  if (s === "PASS") return "success";
+  if (s === "FAIL") return "fail";
+  return "pending";
+}
+
 function resolveStep(stepNum, name, status, score, reason) {
   const li = document.getElementById(`step-${stepNum}`);
   if (!li) return;
 
-  // Restore the human-friendly step name now that thinking is done
   li.querySelector(".timeline-title").textContent = name;
 
   const uiStatus = mapStatus(status);
@@ -101,17 +177,6 @@ function resolveStep(stepNum, name, status, score, reason) {
     li.querySelector(".timeline-content").appendChild(reasonEl);
   }
 }
-
-const API_BASE = "http://127.0.0.1:5050"; // match: uvicorn api_server:app --port 5050
-
-function mapStatus(apiStatus) {
-  const s = String(apiStatus || "").toUpperCase();
-  if (s === "PASS") return "success";
-  if (s === "FAIL") return "fail";
-  return "pending";
-}
-
-let activeStream = null;
 
 function runValidation(question, answer) {
   if (activeStream) activeStream.close();
@@ -155,11 +220,57 @@ function runValidation(question, answer) {
   };
 }
 
+// ── Chat mode: stream LLM response, then validate ──
+
+function runChat(question) {
+  sendBtn.disabled = true;
+  sendBtn.textContent = "…";
+
+  const bubble = addStreamingBubble();
+  let fullAnswer = "";
+
+  const params = new URLSearchParams({ question });
+  const es = new EventSource(`${API_BASE}/chat/stream?${params}`);
+
+  es.onmessage = (e) => {
+    const msg = JSON.parse(e.data);
+
+    if (msg.type === "token") {
+      fullAnswer += msg.content;
+      appendToken(bubble, msg.content);
+    } else if (msg.type === "done") {
+      finishStreaming(bubble);
+      es.close();
+      sendBtn.disabled = false;
+      sendBtn.textContent = "Send";
+      runValidation(question, fullAnswer);
+    }
+  };
+
+  es.onerror = () => {
+    finishStreaming(bubble);
+    es.close();
+    sendBtn.disabled = false;
+    sendBtn.textContent = "Send";
+  };
+}
+
+// ── Form handlers ──
+
 chatForm.addEventListener("submit", (e) => {
   e.preventDefault();
-
   const question = questionInput.value.trim();
-  const answer = answerInput.value.trim();
+  if (!question) return;
+
+  addMessage("user", question);
+  questionInput.value = "";
+  runChat(question);
+});
+
+manualForm.addEventListener("submit", (e) => {
+  e.preventDefault();
+  const question = manualQuestionInput.value.trim();
+  const answer = manualAnswerInput.value.trim();
   if (!question || !answer) return;
 
   addMessage("user", `Q: ${question}\nA: ${answer}`);
