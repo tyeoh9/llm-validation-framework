@@ -11,32 +11,53 @@
     <!-- Left: Chat panel -->
     <section class="panel chat-panel">
       <header class="panel-header">
-        <div class="panel-title">
-          <span class="pill pill-primary"></span>
-          <h1>LLM Chat</h1>
+        <div class="panel-header-top">
+          <div class="panel-title">
+            <span class="pill pill-primary"></span>
+            <h1>LLM Chat</h1>
+          </div>
+          <div class="mode-toggle">
+            <button id="btn-chat-mode" class="toggle-btn active">Chat</button>
+            <button id="btn-manual-mode" class="toggle-btn">Manual</button>
+          </div>
         </div>
-        <p class="panel-subtitle">Draft answers to validate.</p>
+        <p id="panel-subtitle" class="panel-subtitle">Ask a question and watch the LLM respond.</p>
       </header>
 
       <div id="chat-window" class="chat-window">
-        <!-- Example intro messages -->
         <div class="message-row system">
           <div class="message-bubble">
-            <p>Welcome! Ask a question and paste the LLM’s answer below to run it through the validation pipeline.</p>
+            <p>Welcome! Type a question to chat with the LLM, then the validation pipeline runs automatically.</p>
           </div>
         </div>
       </div>
 
+      <!-- Chat mode input (single question) -->
       <form id="chat-form" class="chat-input-row">
         <div class="chat-inputs">
           <textarea
             id="question-input"
             class="input question-input"
+            placeholder="Ask a question..."
+            rows="2"
+          ></textarea>
+        </div>
+        <button type="submit" class="btn-primary" id="send-btn">
+          Send
+        </button>
+      </form>
+
+      <!-- Manual mode input (question + answer) -->
+      <form id="manual-form" class="chat-input-row hidden">
+        <div class="chat-inputs">
+          <textarea
+            id="manual-question-input"
+            class="input question-input"
             placeholder="LLM input (question)..."
             rows="2"
           ></textarea>
           <textarea
-            id="answer-input"
+            id="manual-answer-input"
             class="input answer-input"
             placeholder="LLM output (answer)..."
             rows="3"
@@ -75,6 +96,6 @@
     </section>
   </div>
 
-  <script src="./app.js?v=3"></script>
+  <script src="./app.js?v=4"></script>
 </body>
 </html>

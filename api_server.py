@@ -17,6 +17,7 @@ from components.pipe.Pipe import Pipe
 from components.toxicityagent.ToxicityAgent import ToxicityAgent
 from components.accuracy.AccuracyAgent import AccuracyAgent
 from components.relevancy.RelevancyAgent import RelevancyAgent
+from components.chatbot.Chatbot import Chatbot
 
 app = FastAPI()
 app.add_middleware(
@@ -27,12 +28,19 @@ app.add_middleware(
 )
 
 _pipe = None
+_chatbot = None
 
 def get_pipe():
     global _pipe
     if _pipe is None:
         _pipe = Pipe(steps=[ToxicityAgent(), AccuracyAgent(config_path=None), RelevancyAgent(config_path=None)])
     return _pipe
+
+def get_chatbot():
+    global _chatbot
+    if _chatbot is None:
+        _chatbot = Chatbot()
+    return _chatbot
 
 class ValidateBody(BaseModel):
     question: str
@@ -98,3 +106,33 @@ def validate(body: ValidateBody):
         })
     overall = sum(s["score"] for s in out) / len(out) if out else 0.0
     return {"overall_score": overall, "steps": out}
+
+
+@app.get("/chat/stream")
+async def chat_stream(question: str):
+    async def event_generator():
+        bot = get_chatbot()
+        queue: asyncio.Queue = asyncio.Queue()
+        loop = asyncio.get_event_loop()
+        sentinel = object()
+
+        def _produce():
+            for token in bot.stream(question):
+                loop.call_soon_threadsafe(queue.put_nowait, token)
+            loop.call_soon_threadsafe(queue.put_nowait, sentinel)
+
+        asyncio.ensure_future(asyncio.to_thread(_produce))
+
+        while True:
+            item = await queue.get()
+            if item is sentinel:
+                break
+            yield f"data: {json.dumps({'type': 'token', 'content': item})}\n\n"
+
+        yield f"data: {json.dumps({'type': 'done'})}\n\n"
+
+    return StreamingResponse(
+        event_generator(),
+        media_type="text/event-stream",
+        headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"},
+    )
