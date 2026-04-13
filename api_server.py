@@ -16,6 +16,7 @@ from pydantic import BaseModel
 from components.pipe.Pipe import Pipe
 from components.toxicityagent.ToxicityAgent import ToxicityAgent
 from components.accuracy.AccuracyAgent import AccuracyAgent
+from components.relevancy.RelevancyAgent import RelevancyAgent
 
 app = FastAPI()
 app.add_middleware(
@@ -30,7 +31,7 @@ _pipe = None
 def get_pipe():
     global _pipe
     if _pipe is None:
-        _pipe = Pipe(steps=[ToxicityAgent(), AccuracyAgent(config_path=None)])
+        _pipe = Pipe(steps=[ToxicityAgent(), AccuracyAgent(config_path=None), RelevancyAgent(config_path=None)])
     return _pipe
 
 class ValidateBody(BaseModel):
@@ -54,7 +55,7 @@ async def validate_stream(question: str, answer: str):
                 loop.call_soon_threadsafe(_q.put_nowait, message)
 
             task = asyncio.ensure_future(
-                asyncio.to_thread(step.evaluate, answer, on_progress=on_progress)
+                asyncio.to_thread(step.evaluate, {"question": question, "answer": answer}, on_progress=on_progress)
             )
 
             while not task.done():
@@ -86,7 +87,7 @@ async def validate_stream(question: str, answer: str):
 @app.post("/validate")
 def validate(body: ValidateBody):
     pipe = get_pipe()
-    results = pipe.evaluate(body.answer)
+    results = pipe.evaluate({"question": body.question, "answer": body.answer})
     out = []
     for step, r in zip(pipe.steps, results):
         out.append({

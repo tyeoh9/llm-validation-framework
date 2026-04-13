@@ -77,7 +77,8 @@ class ToxicityAgent:
         status = "FAIL" if max_score > threshold else "PASS"
         return {"status": status, "score": float(max_score)}
 
-    def evaluate(self, statement: str, threshold: float = 0.5, on_progress=None) -> EvaluationResult:
+    def evaluate(self, data, threshold: float = 0.5, on_progress=None) -> EvaluationResult:
+        statement = data["answer"] if isinstance(data, dict) else data
         if on_progress: on_progress("Scanning for explicit language...")
         det_result = self.deterministic_layer(statement)
         if on_progress: on_progress("Running toxicity model...")
