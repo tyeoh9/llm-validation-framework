@@ -45,9 +45,14 @@ class OnlineData:
         return " ".join(key_words[:max_words])
 
     def search(self, query):
-        search_query = self.simplify(query)
-        results = self.searcher.text(search_query, max_results=self.max_results)
-        top_result = self.rank_results(query, results)[0][0]
-        body = top_result["body"]
-        href = top_result["href"]
-        return body, href
+        try:
+            search_query = self.simplify(query)
+            results = self.searcher.text(search_query, max_results=self.max_results)
+            if not results:
+                return None, None
+            top_result = self.rank_results(query, results)[0][0]
+            body = top_result["body"]
+            href = top_result["href"]
+            return body, href
+        except Exception:
+            return None, None

@@ -50,10 +50,13 @@ class AccuracyAgent:
             verbose_mode=False,
         )
 
-    def find_evidence(self, query: str) -> str:
-        """Retrieve external evidence for a query (currently via OnlineData only)."""
+    def find_evidence(self, query: str) -> str | None:
+        """Retrieve external evidence for a query (currently via OnlineData only).
+        Returns None if evidence retrieval fails."""
         # TODO: Implement mechanism to retrieve either online or RAG evidence
         body, href = self._online.search(query)
+        if body is None:
+            return None
         return f"[Source: {href}]\n{body}"
 
     def evaluate(self, data, on_progress=None) -> EvaluationResult:
@@ -61,6 +64,14 @@ class AccuracyAgent:
         text = data["answer"] if isinstance(data, dict) else data
         if on_progress: on_progress("Fetching supporting evidence...")
         evidence = self.find_evidence(text)
+
+        if evidence is None:
+            return {
+                "status": "SKIP",
+                "score": 0.0,
+                "reason": "Evidence retrieval failed; accuracy check skipped.",
+            }
+
         if on_progress: on_progress("Consulting judge model...")
 
         test_case = LLMTestCase(
