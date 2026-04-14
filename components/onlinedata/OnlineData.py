@@ -23,7 +23,12 @@ class OnlineData:
         return ranked
 
     def simplify(self, query: str, max_words: int = 30) -> str:
-        """Condense a query to its key terms by stripping stop words."""
+        """Condense a query to its key terms by stripping stop words.
+        For queries over 30 words, extracts the first sentence first."""
+        if len(query.split()) > max_words:
+            import re
+            first_sentence = re.split(r'(?<=[.!?])\s', query)[0]
+            query = first_sentence
         stop_words = {
             "a", "an", "the", "is", "are", "was", "were", "be", "been", "being",
             "have", "has", "had", "do", "does", "did", "will", "would", "could",
