@@ -22,7 +22,7 @@ class OnlineData:
         ranked = sorted(zip(pages, scores), key=lambda x: x[1], reverse=True)
         return ranked
 
-    def simplify(self, query: str, max_words: int = 10) -> str:
+    def simplify(self, query: str, max_words: int = 30) -> str:
         """Condense a query to its key terms by stripping stop words."""
         stop_words = {
             "a", "an", "the", "is", "are", "was", "were", "be", "been", "being",
