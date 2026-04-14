@@ -6,3 +6,6 @@ __pycache__/
 
 # DeepEval local artifacts
 .deepeval/
+
+# Test result logs
+tests/**/logs/

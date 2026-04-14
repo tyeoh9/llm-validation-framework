@@ -22,3 +22,7 @@ transformers
 flask
 uvicorn
 fastapi
+
+# Testing
+datasets>=2.0.0
+pytest
