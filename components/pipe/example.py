@@ -10,15 +10,13 @@ if str(ROOT) not in sys.path:
 from components.pipe.Pipe import Pipe
 from components.toxicityagent.ToxicityAgent import ToxicityAgent
 from components.accuracy.AccuracyAgent import AccuracyAgent
-from components.relevancy.RelevancyAgent import RelevancyAgent
 
 
 def main():
     toxicity_agent = ToxicityAgent()
     accuracy_agent = AccuracyAgent(config_path=None)
-    relevancy_agent = RelevancyAgent(config_path=None)
 
-    pipe = Pipe(steps=[toxicity_agent, accuracy_agent, relevancy_agent])
+    pipe = Pipe(steps=[toxicity_agent, accuracy_agent])
 
     print("Validation pipeline: enter LLM input (question) and LLM output (answer).")
     print("Type 'exit' to quit.\n")

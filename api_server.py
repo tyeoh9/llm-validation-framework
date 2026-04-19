@@ -16,7 +16,6 @@ from pydantic import BaseModel
 from components.pipe.Pipe import Pipe
 from components.toxicityagent.ToxicityAgent import ToxicityAgent
 from components.accuracy.AccuracyAgent import AccuracyAgent
-from components.relevancy.RelevancyAgent import RelevancyAgent
 from components.chatbot.Chatbot import Chatbot
 
 app = FastAPI()
@@ -33,7 +32,7 @@ _chatbot = None
 def get_pipe():
     global _pipe
     if _pipe is None:
-        _pipe = Pipe(steps=[ToxicityAgent(), AccuracyAgent(config_path=None), RelevancyAgent(config_path=None)])
+        _pipe = Pipe(steps=[ToxicityAgent(), AccuracyAgent(config_path=None)])
     return _pipe
 
 def get_chatbot():
