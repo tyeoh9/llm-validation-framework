@@ -39,4 +39,4 @@ if __name__ == "__main__":
     })
     print(f"Status: {result4['status']}")
     print(f"Score:  {result4['score']}")
-    print(f"Reason: {result4['reason']}\n")
+    print(f"Reason: {result4['Reason']}\n")
