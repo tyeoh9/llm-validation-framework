@@ -15,6 +15,7 @@ from pydantic import BaseModel
 
 from components.pipe.Pipe import Pipe
 from components.toxicityagent.ToxicityAgent import ToxicityAgent
+from components.privacyagent.PrivacyAgent import PrivacyAgent
 from components.accuracy.AccuracyAgent import AccuracyAgent
 from components.chatbot.Chatbot import Chatbot
 
@@ -32,7 +33,7 @@ _chatbot = None
 def get_pipe():
     global _pipe
     if _pipe is None:
-        _pipe = Pipe(steps=[ToxicityAgent(), AccuracyAgent(config_path=None)])
+        _pipe = Pipe(steps=[ToxicityAgent(), PrivacyAgent(), AccuracyAgent(config_path=None)])
     return _pipe
 
 def get_chatbot():
@@ -78,8 +79,6 @@ async def validate_stream(question: str, answer: str):
             result = await task
             scores.append(float(result.get("score", 0.0)))
             yield f"data: {json.dumps({'type': 'step_done', 'step': idx, 'name': name, 'status': result.get('status', ''), 'score': float(result.get('score', 0.0)), 'reason': result.get('reason') or ''})}\n\n"
-            if result.get("status") == "FAIL":
-                break
 
         overall = sum(scores) / len(scores) if scores else 0.0
         yield f"data: {json.dumps({'type': 'done', 'overall_score': overall})}\n\n"
