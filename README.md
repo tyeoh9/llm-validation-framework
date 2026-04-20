@@ -1,10 +1,19 @@
 # LLM Validation Framework
 
-A general framework to validate LLMs.
+A modular framework to validate LLM outputs across accuracy, relevancy, toxicity, and privacy.
+
+## Config
+
+Create a `config.ini` at the repo root (already gitignored — never commit it):
+
+```ini
+[ANTHROPIC]
+API_KEY=your-anthropic-api-key
+```
 
 ## Install
 
-**Requires Python 3.11+**
+Requires Python 3.11+
 
 ```bash
 python3 -m venv venv
@@ -24,7 +33,7 @@ uvicorn api_server:app --host 127.0.0.1 --port 5050
 python3 serve_ui.py
 ```
 
-### Contributors:
+## Contributors
 - Hitha Shri Nagaruru
 - James Wu
 - Lewis Lui
