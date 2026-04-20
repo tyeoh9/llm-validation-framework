@@ -14,12 +14,20 @@ pip install -r requirements.txt
 
 ## Config
 
-Create a `config.ini` at the repo root (already gitignored — never commit it):
+Create a `config.ini` at the repo root (already gitignored — never commit it). Add a section for each provider you want to use:
 
 ```ini
 [ANTHROPIC]
 API_KEY=your-anthropic-api-key
+
+[OPENAI]
+API_KEY=your-openai-api-key
+
+[GEMINI]
+API_KEY=your-gemini-api-key
 ```
+
+At minimum, one provider is required. Supported providers follow [litellm's naming](https://docs.litellm.ai/docs/providers).
 
 ## Run
 

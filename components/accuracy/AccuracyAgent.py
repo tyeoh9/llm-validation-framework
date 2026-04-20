@@ -28,13 +28,13 @@ class AccuracyAgent:
 
     name = "Accuracy check"
 
-    def __init__(self, config_path: str | None = None, max_results: int = 10):
+    def __init__(self, config_path: str | None = None, max_results: int = 10, provider: str = "anthropic", model: str = "claude-haiku-4-5-20251001"):
         self.config_path = config_path
         self._online = OnlineData(max_results=max_results)
-        self._relevancy = RelevancyAgent(config_path=config_path)
+        self._relevancy = RelevancyAgent(config_path=config_path, provider=provider, model=model)
 
-        api_key = load_api_key(config_path)
-        llm_provider = LLMProvider(provider="anthropic", model="claude-haiku-4-5-20251001", key=api_key)
+        api_key = load_api_key(config_path, provider=provider.upper())
+        llm_provider = LLMProvider(provider=provider, model=model, key=api_key)
         model = DeepEvalLLMProvider(llm_provider)
 
         self.equivalence_metric = GEval(
