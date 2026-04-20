@@ -9,3 +9,6 @@ __pycache__/
 
 # Test result logs
 tests/**/logs/
+
+# Claude settings
+.claude
