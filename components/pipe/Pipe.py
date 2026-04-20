@@ -1,8 +1,9 @@
 class Pipe:
-    """Sequentially evaluates a list of steps, stopping early on the first failure.
+    """Sequentially evaluates a list of steps.
 
     Each step is any object with an `evaluate` method. Whatever `data` is passed to
     `Pipe.evaluate(data)` is forwarded unchanged to each step's `evaluate`.
+    All steps run regardless of pass/fail — the user decides what to do with the results.
     """
 
     def __init__(self, steps: list, verbose: bool = True):
@@ -17,11 +18,5 @@ class Pipe:
 
             if self.verbose and result.get("reason"):
                 print(f"Step {idx} reason: {result['reason']}")
-            elif result.get("reason"):
-                print(f"Reason: {result['reason']}")
-
-
-            if result.get("status") == "FAIL":
-                return results
 
         return results

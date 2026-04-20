@@ -1,4 +1,4 @@
-"""Example: run validation pipeline on LLM input + output (toxicity then accuracy)."""
+"""Example: run validation pipeline on LLM input + output."""
 
 import sys
 from pathlib import Path
@@ -9,16 +9,16 @@ if str(ROOT) not in sys.path:
 
 from components.pipe.Pipe import Pipe
 from components.toxicityagent.ToxicityAgent import ToxicityAgent
+from components.privacyagent.PrivacyAgent import PrivacyAgent
 from components.accuracy.AccuracyAgent import AccuracyAgent
-from components.relevancy.RelevancyAgent import RelevancyAgent
 
 
 def main():
     toxicity_agent = ToxicityAgent()
+    privacy_agent = PrivacyAgent()
     accuracy_agent = AccuracyAgent(config_path=None)
-    relevancy_agent = RelevancyAgent(config_path=None)
 
-    pipe = Pipe(steps=[toxicity_agent, accuracy_agent, relevancy_agent])
+    pipe = Pipe(steps=[toxicity_agent, privacy_agent, accuracy_agent])
 
     print("Validation pipeline: enter LLM input (question) and LLM output (answer).")
     print("Type 'exit' to quit.\n")
