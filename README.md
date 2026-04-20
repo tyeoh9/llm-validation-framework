@@ -2,15 +2,6 @@
 
 A modular framework to validate LLM outputs across accuracy, relevancy, toxicity, and privacy.
 
-## Config
-
-Create a `config.ini` at the repo root (already gitignored — never commit it):
-
-```ini
-[ANTHROPIC]
-API_KEY=your-anthropic-api-key
-```
-
 ## Install
 
 Requires Python 3.11+
@@ -19,6 +10,15 @@ Requires Python 3.11+
 python3 -m venv venv
 source venv/bin/activate
 pip install -r requirements.txt
+```
+
+## Config
+
+Create a `config.ini` at the repo root (already gitignored — never commit it):
+
+```ini
+[ANTHROPIC]
+API_KEY=your-anthropic-api-key
 ```
 
 ## Run
