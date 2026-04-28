@@ -7,6 +7,7 @@ os.environ.setdefault("TRANSFORMERS_VERBOSITY", "error")
 warnings.filterwarnings("ignore")
 
 from deepeval.metrics import GEval
+from deepeval.metrics.g_eval.utils import Rubric
 from deepeval.test_case import LLMTestCase, LLMTestCaseParams
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -30,11 +31,17 @@ class RelevancyAgent:
 
         self.relevancy_metric = GEval(
             name="Answer Relevancy",
+            criteria="Determine whether the actual output directly and accurately addresses the input question.",
             evaluation_steps=[
                 "Check whether the actual output directly addresses the question asked in the input.",
                 "Penalise answers that go off-topic or provide information unrelated to the question.",
                 "An answer may include additional helpful context, but its core must be relevant to the input.",
                 "The reasoning should sacrifice grammar for concision - one sentence only.",
+            ],
+            rubric=[
+                Rubric(score_range=(0, 3), expected_outcome="The answer does not address the question at all, or is completely off-topic."),
+                Rubric(score_range=(4, 6), expected_outcome="The answer partially addresses the question, or addresses it with significant gaps."),
+                Rubric(score_range=(7, 10), expected_outcome="The answer directly and accurately addresses the question."),
             ],
             evaluation_params=[
                 LLMTestCaseParams.INPUT,

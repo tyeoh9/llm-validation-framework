@@ -7,6 +7,7 @@ os.environ.setdefault("TRANSFORMERS_VERBOSITY", "error")
 warnings.filterwarnings("ignore")
 
 from deepeval.metrics import GEval
+from deepeval.metrics.g_eval.utils import Rubric
 from deepeval.test_case import LLMTestCase, LLMTestCaseParams
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -37,11 +38,16 @@ class AccuracyAgent:
 
         self.factual_metric = GEval(
             name="Factual Accuracy",
+            criteria="Assess whether the actual output is a factually correct answer to the input question, using your own knowledge.",
             evaluation_steps=[
-                "Using your own knowledge, assess whether the 'actual output' is a factually correct answer to the 'input' (the question).",
-                "A brief or single-word answer that is factually correct should score 0.8 or higher.",
-                "Score below 0.5 only when the actual output makes a factual claim that is clearly wrong.",
-                "The reasoning should sacrifice grammar for concision - one sentence only."
+                "Using your own knowledge, assess whether the actual output is a factually correct answer to the input question.",
+                "A brief or single-word answer that correctly identifies the right entity, person, place, or title should be treated as fully correct.",
+                "The reasoning should sacrifice grammar for concision - one sentence only.",
+            ],
+            rubric=[
+                Rubric(score_range=(0, 3), expected_outcome="The answer is factually incorrect or clearly wrong."),
+                Rubric(score_range=(4, 6), expected_outcome="The answer is ambiguous, only partially correct, or cannot be verified."),
+                Rubric(score_range=(7, 10), expected_outcome="The answer is factually correct."),
             ],
             evaluation_params=[
                 LLMTestCaseParams.INPUT,
