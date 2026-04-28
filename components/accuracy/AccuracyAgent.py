@@ -40,12 +40,10 @@ class AccuracyAgent:
         self.equivalence_metric = GEval(
             name="Text Equivalence",
             evaluation_steps=[
-                "First, determine whether the 'expected output' (evidence text) is topically relevant to the 'actual output' and the question.",
-                "If the evidence is clearly off-topic or about a different subject, assign a score of 0.5 (neutral — evidence is not useful).",
-                "If the evidence IS relevant, check ONLY whether the 'actual output' makes a specific factual claim that directly contradicts a fact in the evidence.",
-                "A brief or single-word answer that identifies the correct entity (person, place, title, etc.) should score 0.8 or higher if it does not contradict the evidence.",
+                "Check whether the 'actual output' makes any factual claims that directly contradict facts stated in the 'expected output'.",
+                "Contradicting opinions are OK, but contradicting verifiable facts are not.",
+                "A brief or single-word answer that correctly identifies an entity should score 0.8 or higher if it does not contradict the evidence.",
                 "Absence of detail is NOT a contradiction — do not penalize an answer for being short or incomplete.",
-                "Score below 0.5 only when the actual output asserts something that is factually wrong according to the evidence.",
                 "The reasoning should sacrifice grammar for concision - one sentence only."
             ],
             evaluation_params=[
@@ -84,13 +82,13 @@ class AccuracyAgent:
         evidence = self.find_evidence(question or answer)
 
         if evidence is None:
-            combined = RELEVANCY_WEIGHT * rel_score
+            combined = RELEVANCY_WEIGHT * rel_score + FACTUAL_WEIGHT * 0.5
             return {
                 "status": "FAIL" if combined < 0.5 else "PASS",
                 "score": combined,
                 "reason": (
                     f"Relevancy ({rel_score:.2f}): {rel_reason} | "
-                    f"Factual: skipped (evidence retrieval failed)."
+                    f"Factual (skipped): no relevant evidence found."
                 ),
             }
 
@@ -98,7 +96,7 @@ class AccuracyAgent:
             on_progress("Consulting judge model...")
 
         test_case = LLMTestCase(
-            input="Does the actual output contradict any facts in the evidence text, or is the evidence irrelevant?",
+            input="Does the actual output contradict any specific facts in the evidence text?",
             actual_output=answer,
             expected_output=evidence,
         )

@@ -11,9 +11,10 @@ TODO:
 class OnlineData:
     """Retrieves relevant facts/data from the web based on the query."""
 
-    def __init__(self, max_results=10):
+    def __init__(self, max_results=10, min_score=1.0):
         self.searcher = DDGS()
         self.max_results = max_results
+        self.min_score = min_score
 
     def rank_results(self, claim: str, pages: list[str]) -> list[tuple[str, float]]:
         tokenized_corpus = [p["body"].lower().split() for p in pages]
@@ -50,9 +51,9 @@ class OnlineData:
             results = self.searcher.text(search_query, max_results=self.max_results)
             if not results:
                 return None, None
-            top_result = self.rank_results(query, results)[0][0]
-            body = top_result["body"]
-            href = top_result["href"]
-            return body, href
+            top_result, top_score = self.rank_results(query, results)[0]
+            if top_score < self.min_score:
+                return None, None
+            return top_result["body"], top_result["href"]
         except Exception:
             return None, None
