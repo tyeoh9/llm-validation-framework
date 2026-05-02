@@ -14,7 +14,6 @@ if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
 from config_loader import load_api_key
-from components.onlinedata.OnlineData import OnlineData
 from components.llmprovider.LLMProvider import LLMProvider, DeepEvalLLMProvider
 from components.relevancy.RelevancyAgent import RelevancyAgent
 from models import EvaluationResult
@@ -28,39 +27,30 @@ class AccuracyAgent:
 
     name = "Accuracy check"
 
-    def __init__(self, config_path: str | None = None, max_results: int = 10, provider: str = "anthropic", model: str = "claude-haiku-4-5-20251001"):
+    def __init__(self, config_path: str | None = None, provider: str = "anthropic", model: str = "claude-haiku-4-5-20251001"):
         self.config_path = config_path
-        self._online = OnlineData(max_results=max_results)
         self._relevancy = RelevancyAgent(config_path=config_path, provider=provider, model=model)
 
         api_key = load_api_key(config_path, provider=provider.upper())
         llm_provider = LLMProvider(provider=provider, model=model, key=api_key)
         model = DeepEvalLLMProvider(llm_provider)
 
-        self.equivalence_metric = GEval(
-            name="Text Equivalence",
+        self.factual_metric = GEval(
+            name="Factual Accuracy",
             evaluation_steps=[
-                "Check whether the facts in 'actual output' contradicts any facts in 'expected output'",
-                "Contradicting opinions are OK but contradict facts are not.",
-                "The reasoning should sacrifice grammar for concision - one sentence only."
+                "Using your own knowledge, assess whether the actual output is a factually correct answer to the input question.",
+                "A brief or single-word answer that correctly identifies the right entity, person, place, or title should be treated as fully correct.",
+                "If you are uncertain whether the answer is correct, lean toward a higher score rather than penalizing by default.",
+                "The reasoning should sacrifice grammar for concision - one sentence only.",
             ],
             evaluation_params=[
                 LLMTestCaseParams.INPUT,
                 LLMTestCaseParams.ACTUAL_OUTPUT,
-                LLMTestCaseParams.EXPECTED_OUTPUT,
             ],
             model=model,
             threshold=0.5,
             verbose_mode=False,
         )
-
-    def find_evidence(self, query: str) -> str | None:
-        """Retrieve external evidence for a query (currently via OnlineData only).
-        Returns None if evidence retrieval fails."""
-        body, href = self._online.search(query)
-        if body is None:
-            return None
-        return f"[Source: {href}]\n{body}"
 
     def evaluate(self, data, on_progress=None) -> EvaluationResult:
         """Run relevancy + factual checks and return a combined result."""
@@ -76,39 +66,25 @@ class AccuracyAgent:
 
         # --- Factual accuracy ---
         if on_progress:
-            on_progress("Fetching supporting evidence...")
-        evidence = self.find_evidence(question or answer)
-
-        if evidence is None:
-            combined = RELEVANCY_WEIGHT * rel_score
-            return {
-                "status": "FAIL" if combined < 0.5 else "PASS",
-                "score": combined,
-                "reason": (
-                    f"Relevancy ({rel_score:.2f}): {rel_reason} | "
-                    f"Factual: skipped (evidence retrieval failed)."
-                ),
-            }
-
-        if on_progress:
             on_progress("Consulting judge model...")
 
         test_case = LLMTestCase(
-            input="Determine if the actual output is semantically consistent with the evidence text.",
+            input=question,
             actual_output=answer,
-            expected_output=evidence,
         )
-        self.equivalence_metric.measure(test_case)
+        self.factual_metric.measure(test_case)
 
-        fact_score = float(self.equivalence_metric.score or 0.0)
-        fact_reason = getattr(self.equivalence_metric, "reason", "")
+        fact_score = float(self.factual_metric.score or 0.0)
+        fact_reason = getattr(self.factual_metric, "reason", "")
 
         combined = RELEVANCY_WEIGHT * rel_score + FACTUAL_WEIGHT * fact_score
         status = "PASS" if combined >= 0.5 else "FAIL"
 
-        reason = (
-            f"Relevancy ({rel_score:.2f}): {rel_reason} | "
-            f"Factual ({fact_score:.2f}): {fact_reason}"
-        )
-
-        return {"status": status, "score": combined, "reason": reason}
+        return {
+            "status": status,
+            "score": combined,
+            "reason": (
+                f"Relevancy ({rel_score:.2f}): {rel_reason} | "
+                f"Factual ({fact_score:.2f}): {fact_reason}"
+            ),
+        }
