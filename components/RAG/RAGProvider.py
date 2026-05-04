@@ -1,34 +1,23 @@
-from typing import List
+from typing import Any, Optional
 
 from langchain_core.documents import Document
 
 
 class RAGProvider:
-    """
-    General RAG wrapper.
+    def __init__(self, retriever: Any):
+        # NOTE: In documentation, clearly specify that the passed-in object
+        # must implement: `invoke(query: str) -> List[Document]`.
+        # This is the only required contract for compatibility.
+        if not hasattr(retriever, "invoke"):
+            raise TypeError(
+                "Retriever must implement `invoke(query: str) -> List[Document]`"
+            )
+        self.retriever = retriever
 
-    This class does not know or care which vector DB is being used.
-    It only calls the provider.
-    """
+    def get_most_relevant_doc(self, query: str) -> Optional[Document]:
+        docs = self.retriever.invoke(query)
+        return docs[0] if docs else None
 
-    def __init__(self, vector_provider: VectorDBProvider):
-        self.vector_provider = vector_provider
-
-    def getRelevantDocs(self, query: str, k: int = 5) -> List[Document]:
-        """
-        Return the top-k most relevant document chunks.
-        """
-        return self.vector_provider.getRelevantDocs(query, k)
-
-    def extractDocs(
-        self,
-        query: str,
-        threshold: float,
-        k: int = 5,
-    ) -> List[Document]:
-        """
-        Return top-k document chunks that pass the threshold.
-
-        If none pass, return [].
-        """
-        return self.vector_provider.extractDocs(query, threshold, k)
+    def extract_content(self, query: str) -> Optional[str]:
+        doc = self.get_most_relevant_doc(query)
+        return doc.page_content if doc else None
