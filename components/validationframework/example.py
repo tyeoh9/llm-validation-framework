@@ -1,4 +1,19 @@
-"""Example usage of ValidationFramework (input + output guardrails)."""
+"""Example usage of ValidationFramework (input + output guardrails).
+
+RAG-augmented accuracy (optional):
+    If you have a document corpus, pass a RAGProvider to AccuracyAgent so the
+    judge uses retrieved context as ground truth instead of its own knowledge.
+
+        from components.rag.RAG import RAG
+        from components.rag.RAGProvider import RAGProvider
+
+        rag_instance = RAG(data_dir="path/to/pdfs")
+        rag_instance.build_or_load_vectorstore()
+        retriever = rag_instance._vectorstore.as_retriever()
+        rag = RAGProvider(retriever)
+
+        output_guardrail = Pipe(steps=[ToxicityAgent(), AccuracyAgent(rag=rag)], verbose=False)
+"""
 
 import sys
 from pathlib import Path
@@ -32,7 +47,7 @@ def main():
         output_guardrail=output_guardrail,
     )
 
-    query = "In one short sentence, explain what the Pacific Ocean is."
+    query = "What is the pacific ocean?"
     result = vf.validate(query)
 
     print("Validation result")

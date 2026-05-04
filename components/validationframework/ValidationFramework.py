@@ -1,17 +1,14 @@
 
-# from ragprovider import RAGProvider
 from components.llmprovider.LLMProvider import LLMProvider
 from components.pipe.Pipe import Pipe
 from models import EvaluationResult, GuardrailSummary, ValidationSummary
 
-# TODO: Integrate RAG component once RAGProvider class has been implemented
 
 class ValidationFramework:
     """Runs the entire validation pipeline from user query to final output."""
 
     def __init__(self, llm: LLMProvider, input_guardrail: Pipe, output_guardrail: Pipe):
         self.llm = llm
-        # self.rag = rag
         self.input_guardrail = input_guardrail
         self.output_guardrail = output_guardrail
 
