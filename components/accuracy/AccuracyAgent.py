@@ -2,6 +2,7 @@ import os
 import sys
 import warnings
 from pathlib import Path
+from typing import Optional
 
 os.environ.setdefault("TRANSFORMERS_VERBOSITY", "error")
 warnings.filterwarnings("ignore")
@@ -15,6 +16,7 @@ if str(ROOT) not in sys.path:
 
 from config_loader import load_api_key
 from components.llmprovider.LLMProvider import LLMProvider, DeepEvalLLMProvider
+from components.rag.RAGProvider import RAGProvider
 from components.relevancy.RelevancyAgent import RelevancyAgent
 from models import EvaluationResult
 
@@ -27,27 +29,50 @@ class AccuracyAgent:
 
     name = "Accuracy check"
 
-    def __init__(self, config_path: str | None = None, provider: str = "anthropic", model: str = "claude-haiku-4-5-20251001"):
+    def __init__(
+        self,
+        config_path: str | None = None,
+        provider: str = "anthropic",
+        model: str = "claude-haiku-4-5-20251001",
+        rag: Optional[RAGProvider] = None,
+    ):
         self.config_path = config_path
+        self.rag = rag
         self._relevancy = RelevancyAgent(config_path=config_path, provider=provider, model=model)
 
         api_key = load_api_key(config_path, provider=provider.upper())
         llm_provider = LLMProvider(provider=provider, model=model, key=api_key)
-        model = DeepEvalLLMProvider(llm_provider)
+        judge_model = DeepEvalLLMProvider(llm_provider)
 
-        self.factual_metric = GEval(
-            name="Factual Accuracy",
-            evaluation_steps=[
+        if rag:
+            evaluation_steps = [
+                "Using the provided context as the source of truth, assess whether the actual output is a factually correct answer to the input question.",
+                "Penalize answers that contradict or are unsupported by the context, even if they seem plausible from general knowledge.",
+                "A brief or single-word answer that correctly matches the context should be treated as fully correct.",
+                "The reasoning should sacrifice grammar for concision - one sentence only.",
+            ]
+            evaluation_params = [
+                LLMTestCaseParams.INPUT,
+                LLMTestCaseParams.ACTUAL_OUTPUT,
+                LLMTestCaseParams.CONTEXT,
+            ]
+        else:
+            evaluation_steps = [
                 "Using your own knowledge, assess whether the actual output is a factually correct answer to the input question.",
                 "A brief or single-word answer that correctly identifies the right entity, person, place, or title should be treated as fully correct.",
                 "If you are uncertain whether the answer is correct, lean toward a higher score rather than penalizing by default.",
                 "The reasoning should sacrifice grammar for concision - one sentence only.",
-            ],
-            evaluation_params=[
+            ]
+            evaluation_params = [
                 LLMTestCaseParams.INPUT,
                 LLMTestCaseParams.ACTUAL_OUTPUT,
-            ],
-            model=model,
+            ]
+
+        self.factual_metric = GEval(
+            name="Factual Accuracy",
+            evaluation_steps=evaluation_steps,
+            evaluation_params=evaluation_params,
+            model=judge_model,
             threshold=0.5,
             verbose_mode=False,
         )
@@ -68,9 +93,18 @@ class AccuracyAgent:
         if on_progress:
             on_progress("Consulting judge model...")
 
+        context = None
+        if self.rag:
+            if on_progress:
+                on_progress("Retrieving RAG context...")
+            retrieved = self.rag.extract_content(question)
+            if retrieved:
+                context = [retrieved]
+
         test_case = LLMTestCase(
             input=question,
             actual_output=answer,
+            context=context,
         )
         self.factual_metric.measure(test_case)
 
