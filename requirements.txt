@@ -1,29 +1,25 @@
-# Requires Python 3.11
+# Requires Python 3.11+
+# Source of truth is pyproject.toml — this file mirrors it for convenience.
+# Install all extras with: pip install -e ".[dev]"
 
+# Core
 anthropic
 deepeval>=1.0.0
 litellm
-
+better-profanity
+detoxify
+sentence-transformers
+torch
 duckduckgo-search>=6.2.0
 ddgs
 rank-bm25>=0.2.2
-
-better-profanity
-detoxify
-
-faiss-cpu
-langchain-community
-langchain-huggingface
-langchain-text-splitters
-pypdf
-sentence-transformers
-torch
-transformers
 pydantic
-uvicorn
-fastapi
 
-# Testing
+# Demo (optional extra: pip install -e ".[demo]")
+fastapi
+uvicorn
+
+# Testing (optional extra: pip install -e ".[test]")
 datasets>=2.0.0
 pytest
 scikit-learn
