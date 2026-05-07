@@ -1,0 +1,47 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "llm-validation-framework"
+version = "0.1.0"
+description = "A composable validation framework for LLM inputs and outputs"
+readme = "README.md"
+license = { file = "LICENSE" }
+requires-python = ">=3.11"
+dependencies = [
+    "litellm",
+    "deepeval>=1.0.0",
+    "anthropic",
+    "better-profanity",
+    "detoxify",
+    "sentence-transformers",
+    "torch",
+    "duckduckgo-search>=6.2.0",
+    "ddgs",
+    "rank-bm25>=0.2.2",
+    "pydantic",
+]
+
+[project.optional-dependencies]
+demo = [
+    "fastapi",
+    "uvicorn",
+]
+test = [
+    "pytest",
+    "datasets>=2.0.0",
+    "scikit-learn",
+]
+dev = [
+    "llm-validation-framework[demo,test]",
+]
+
+[tool.setuptools.packages.find]
+include = ["llm_validation_framework*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = ["test_*.py"]
+python_classes = ["Test*"]
+python_functions = ["test_*"]

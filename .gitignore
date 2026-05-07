@@ -1,11 +1,28 @@
 config.ini
+.env
 
 # Python cache artifacts
 __pycache__/
 *.py[cod]
+.pytest_cache/
+
+# Package build/install artifacts
+*.egg-info/
+dist/
+build/
+
+# Virtual environments
+.venv/
+venv/
+env/
 
 # DeepEval local artifacts
 .deepeval/
+
+# RAG-generated artifacts (demo)
+faiss_index/
+data/
+retrieval_output.txt
 
 # Test result logs
 tests/**/logs/
