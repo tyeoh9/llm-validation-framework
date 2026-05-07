@@ -10,6 +10,11 @@ Requires Python 3.11+
 pip install -e .
 ```
 
+**Optional extras:**
+- `pip install -e ".[demo]"` — FastAPI demo server
+- `pip install -e ".[test]"` — pytest + datasets
+- `pip install -e ".[dev]"` — both
+
 ## Config
 
 API keys are read from the environment or a `config.ini` file at the repo root (gitignored — never commit it).
@@ -26,6 +31,22 @@ API_KEY=your-anthropic-api-key
 ```
 
 Supported providers follow [litellm's naming](https://docs.litellm.ai/docs/providers).
+
+## Agents
+
+| Agent | What it does |
+|---|---|
+| `ToxicityAgent` | Three-layer harmful content check (profanity → toxicity model → semantic similarity). No API calls. |
+| `PrivacyAgent` | Regex scan for SSN, credit cards, API keys, and optional system prompt leakage. No API calls. |
+| `AccuracyAgent` | LLM-as-a-judge factual accuracy + relevancy, with optional RAG grounding. Requires API key. |
+| `RelevancyAgent` | LLM-as-a-judge check that the answer addresses the question. Requires API key. |
+| `BiasAgent` | LLM-as-a-judge scan for stereotypes and discriminatory language. Requires API key. |
+
+`ToxicityAgent` and `PrivacyAgent` run fully locally with no external calls. The other three invoke an LLM on each evaluation.
+
+**Notable constructor options:**
+- `PrivacyAgent(system_prompt="...")` — also detects when the response leaks content from your system prompt
+- `AccuracyAgent(rag=RAGProvider(retriever))` — grounds factual checks against your own corpus (see [RAG-Augmented Accuracy](#rag-augmented-accuracy))
 
 ## Usage
 
@@ -44,13 +65,45 @@ print(result["status"], result["score"])
 
 See `examples/` for more usage patterns.
 
+## Return value
+
+`validate()` returns a nested dict:
+
+```python
+{
+    "status": "PASS" | "FAIL",       # overall result
+    "score": float,                   # average of input + output scores
+    "input": {
+        "status": "PASS" | "FAIL",
+        "score": float,
+        "results": [{"status": ..., "score": ..., "reason": ...}]
+    },
+    "output": {
+        "status": "PASS" | "FAIL",
+        "score": float,
+        "results": [{"status": ..., "score": ..., "reason": ...}]
+    }
+}
+```
+
+Individual step results have `status` of `"PASS"`, `"FAIL"`, or `"TIMEOUT"`.
+
+## RAG-Augmented Accuracy
+
+Pass a retriever to `AccuracyAgent` to ground factual checks against your own corpus:
+
+```python
+from llm_validation_framework import AccuracyAgent, RAGProvider
+
+retriever = your_vectorstore.as_retriever()  # any object with .invoke(query) -> List[Document]
+accuracy = AccuracyAgent(rag=RAGProvider(retriever))
+```
+
+See `examples/accuracy_example.py` for a runnable version.
+
 ## Run the demo
 
-The demo is a FastAPI backend + static web UI. Install demo dependencies first:
-
-```bash
-pip install -e ".[demo]"
-```
+The demo is a FastAPI backend + static web UI.
 
 **Terminal 1 — API server:**
 ```bash
@@ -64,33 +117,12 @@ python demo/serve_ui.py
 
 Open `http://127.0.0.1:8000` in your browser.
 
-## Repository structure
-
-```
-llm_validation_framework/   installable Python package
-├── validation_framework.py     main interface (ValidationFramework)
-├── pipe.py                     sequential pipeline runner (Pipe)
-├── llm_provider.py             LLM abstraction (LLMProvider)
-├── toxicity_agent.py           3-layer toxicity check
-├── privacy_agent.py            PII / secret detection
-├── accuracy_agent.py           relevancy + factual accuracy
-├── relevancy_agent.py          LLM-as-judge relevancy
-├── bias_agent.py               LLM-as-judge bias detection
-├── online_data.py              DuckDuckGo search + BM25 ranking
-├── config_loader.py            API key loader
-└── rag_provider.py             RAGProvider adapter (plug in any retriever)
-
-demo/                       web demo (not part of the package)
-├── api_server.py               FastAPI backend
-├── serve_ui.py                 static file server
-└── ui/                         HTML/JS/CSS frontend
-
-examples/                   standalone usage scripts
-tests/                      pytest test suite
-```
-
 ## Contributors
 - Hitha Shri Nagaruru
 - James Wu
 - Lewis Lui
 - Thomas Yeoh
+
+## License
+
+MIT — see [LICENSE](LICENSE)
