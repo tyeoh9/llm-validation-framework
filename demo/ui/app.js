@@ -88,9 +88,12 @@ function appendToken(bubble, token) {
   chatWindow.scrollTop = chatWindow.scrollHeight;
 }
 
-function finishStreaming(bubble) {
+function finishStreaming(bubble, fullText) {
   const cursor = bubble.querySelector(".streaming-cursor");
   if (cursor) cursor.remove();
+  if (fullText && typeof marked !== "undefined") {
+    bubble.innerHTML = marked.parse(fullText);
+  }
 }
 
 // ── Validation pipeline (shared by both modes) ──
@@ -248,7 +251,7 @@ function runChat(question) {
       fullAnswer += msg.content;
       appendToken(bubble, msg.content);
     } else if (msg.type === "done") {
-      finishStreaming(bubble);
+      finishStreaming(bubble, fullAnswer);
       es.close();
       sendBtn.disabled = false;
       sendBtn.textContent = "Send";
@@ -257,7 +260,7 @@ function runChat(question) {
   };
 
   es.onerror = () => {
-    finishStreaming(bubble);
+    finishStreaming(bubble, fullAnswer);
     es.close();
     sendBtn.disabled = false;
     sendBtn.textContent = "Send";
