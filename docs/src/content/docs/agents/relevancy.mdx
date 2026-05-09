@@ -1,0 +1,93 @@
+---
+title: RelevancyAgent
+description: LLM-as-a-judge check that the answer directly addresses the question asked.
+---
+
+import { Badge } from '@astrojs/starlight/components';
+
+<Badge text="Requires API key" variant="caution" />
+
+`RelevancyAgent` evaluates whether an LLM's answer is on-topic and directly addresses the question. It uses [`GEval`](/llm-validation-framework/concepts/geval/) with a rubric focused on staying on-topic while allowing useful additional context.
+
+This agent is also used internally by `AccuracyAgent` as the relevancy sub-component (40% weight).
+
+## Constructor
+
+```python
+RelevancyAgent(
+    config_path: str | None = None,
+    provider: str = "anthropic",
+    model: str = "claude-haiku-4-5-20251001",
+)
+```
+
+| Parameter | Type | Default | Description |
+|---|---|---|---|
+| `config_path` | `str \| None` | `None` | Path to `config.ini` for API key loading. |
+| `provider` | `str` | `"anthropic"` | LLM provider for the judge model. |
+| `model` | `str` | `"claude-haiku-4-5-20251001"` | Judge model identifier. |
+
+## `evaluate(data)`
+
+```python
+def evaluate(
+    data: dict,          # {"question": str, "answer": str}
+    on_progress=None,
+) -> EvaluationResult
+```
+
+**`data` must be a dict** with both `"question"` and `"answer"` keys.
+
+**Return value:**
+
+```python
+{
+    "status": "PASS" | "FAIL",   # PASS if score ≥ 0.5
+    "score": float,               # GEval score, 0.0 – 1.0
+    "reason": str,                # One-sentence explanation from the judge
+}
+```
+
+## Evaluation rubric
+
+The judge model is asked to:
+
+1. Check whether the answer **directly addresses** the question asked
+2. Penalise answers that go **off-topic** or provide unrelated information
+3. Allow answers that include additional helpful context, as long as the **core** is relevant
+
+## Examples
+
+### On-topic answer
+
+```python
+from llm_validation_framework import RelevancyAgent
+
+agent = RelevancyAgent()
+
+result = agent.evaluate({
+    "question": "What is the capital of France?",
+    "answer": "The capital of France is Paris, a city known for the Eiffel Tower.",
+})
+
+print(result["status"])  # "PASS"
+print(result["score"])   # e.g. 0.95
+print(result["reason"])  # "Answer directly addresses the question..."
+```
+
+### Off-topic answer
+
+```python
+result = agent.evaluate({
+    "question": "What is the capital of France?",
+    "answer": "France is a country in Western Europe with a rich history.",
+})
+
+print(result["status"])  # "FAIL" (doesn't answer the actual question)
+```
+
+### Using a different judge
+
+```python
+agent = RelevancyAgent(provider="openai", model="gpt-4o-mini")
+```

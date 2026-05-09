@@ -1,0 +1,119 @@
+---
+title: AccuracyAgent
+description: LLM-as-a-judge factual accuracy check, optionally grounded against a RAG retriever.
+---
+
+import { Aside, Badge } from '@astrojs/starlight/components';
+
+<Badge text="Requires API key" variant="caution" />
+
+`AccuracyAgent` evaluates whether an LLM's answer is factually correct. It combines a **relevancy sub-check** (40%) and a **factual accuracy check** (60%) — both powered by [`GEval`](/llm-validation-framework/concepts/geval/), Deepeval's LLM-as-a-judge metric.
+
+When a `RAGProvider` is supplied, the factual check is grounded against retrieved documents instead of the judge model's own knowledge.
+
+## Constructor
+
+```python
+AccuracyAgent(
+    config_path: str | None = None,
+    provider: str = "anthropic",
+    model: str = "claude-haiku-4-5-20251001",
+    rag: RAGProvider | None = None,
+)
+```
+
+| Parameter | Type | Default | Description |
+|---|---|---|---|
+| `config_path` | `str \| None` | `None` | Path to `config.ini` for API key loading. Falls back to env var then cwd. |
+| `provider` | `str` | `"anthropic"` | LLM provider for the judge model (any litellm provider). |
+| `model` | `str` | `"claude-haiku-4-5-20251001"` | Judge model identifier. |
+| `rag` | `RAGProvider \| None` | `None` | Optional RAG retriever. When provided, factual checks are grounded against retrieved context. |
+
+## `evaluate(data)`
+
+```python
+def evaluate(
+    data: dict,          # {"question": str, "answer": str}
+    on_progress=None,
+) -> EvaluationResult
+```
+
+Runs the relevancy sub-check and the factual accuracy check, then returns a combined score.
+
+**`data` must be a dict** with both `"question"` and `"answer"` keys.
+
+**Return value:**
+
+```python
+{
+    "status": "PASS" | "FAIL",
+    "score": float,       # 0.4 * relevancy_score + 0.6 * factual_score
+    "reason": "Relevancy (0.85): <reason> | Factual (0.90): <reason>"
+}
+```
+
+The combined score must be `≥ 0.5` to pass.
+
+## How scoring works
+
+```
+combined = 0.4 × relevancy_score + 0.6 × factual_score
+status   = "PASS" if combined ≥ 0.5 else "FAIL"
+```
+
+Both sub-scores come from `GEval` and are in the range `[0.0, 1.0]`. The factual check uses different evaluation criteria depending on whether a `RAGProvider` is attached:
+
+- **Without RAG:** The judge uses its own knowledge to assess factual correctness. It is intentionally lenient on brief or single-word correct answers.
+- **With RAG:** The judge uses retrieved context as the source of truth. Answers that contradict the context fail even if they're plausible from general knowledge.
+
+## Examples
+
+### Without RAG
+
+```python
+from llm_validation_framework import AccuracyAgent
+
+agent = AccuracyAgent()
+
+result = agent.evaluate({
+    "question": "Where is the Eiffel Tower?",
+    "answer": "The Eiffel Tower is located in Paris, France.",
+})
+
+print(result["status"])   # "PASS"
+print(f"{result['score']:.2f}")  # e.g. "0.88"
+print(result["reason"])
+```
+
+### With RAG
+
+```python
+from llm_validation_framework import AccuracyAgent, RAGProvider
+
+# Any LangChain-compatible retriever
+retriever = your_vectorstore.as_retriever()
+rag = RAGProvider(retriever)
+
+agent = AccuracyAgent(rag=rag)
+
+result = agent.evaluate({
+    "question": "Who founded the company according to our internal docs?",
+    "answer": "Jane Smith founded the company in 2010.",
+})
+# Grounded against retrieved documents — will FAIL if docs say otherwise
+```
+
+### Using a different judge model
+
+```python
+import os
+
+agent = AccuracyAgent(
+    provider="openai",
+    model="gpt-4o-mini",
+)
+```
+
+<Aside type="note">
+`AccuracyAgent` internally instantiates a `RelevancyAgent` and runs it as a sub-check. The relevancy agent shares the same `config_path`, `provider`, and `model` parameters.
+</Aside>

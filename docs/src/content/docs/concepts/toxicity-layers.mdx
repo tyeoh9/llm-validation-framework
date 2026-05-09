@@ -1,0 +1,108 @@
+---
+title: "Toxicity: 3-Layer Detection"
+description: How ToxicityAgent's three detection layers work, why each exists, and how they combine into a single safety score.
+---
+
+`ToxicityAgent` runs three detection layers sequentially and combines their raw scores into a single safety score. Each layer catches different kinds of harmful content and has different failure modes — the three-layer design compensates for each layer's weaknesses.
+
+## Layer overview
+
+| Layer | Method | Speed | What it catches | What it misses |
+|---|---|---|---|---|
+| **Deterministic** | Profanity word list | ~1ms | Explicit slurs and profanity | Coded language, implicit threats |
+| **Probabilistic** | BERT toxicity model | ~50ms | Toxic framing, implicit threats, severe language | Low-frequency or novel phrasing |
+| **Semantic** | Sentence embeddings + cosine similarity | ~100ms | Topic-based harm (e.g. "how to make explosives") | Short, ambiguous fragments |
+
+## Layer 1: Deterministic
+
+```python
+from better_profanity import profanity
+flagged = profanity.contains_profanity(statement)
+```
+
+Uses the `better-profanity` library's built-in word list plus any custom words you provide. This is O(1) pattern matching — purely lexical, no model inference.
+
+- **Score: `1.0`** if flagged (high-risk), **`0.0`** if clean
+- **Weight in combined score: 20%**
+
+This layer handles the easy cases — slurs and explicit profanity — quickly and with zero false negatives on known words. Its weight is low because it has a high false-negative rate on anything that avoids the word list.
+
+## Layer 2: Probabilistic
+
+```python
+from detoxify import Detoxify
+tox_scores = Detoxify("original").predict(statement)
+max_tox_score = max(tox_scores.values())
+```
+
+[Detoxify](https://github.com/unitaryai/detoxify) is a BERT-based model trained on the [Jigsaw Unintended Bias in Toxicity Classification](https://www.kaggle.com/c/jigsaw-unintended-bias-in-toxicity-classification) dataset. It predicts six toxicity sub-scores and this layer takes the maximum:
+
+- `toxicity`
+- `severe_toxicity`
+- `obscene`
+- `identity_attack`
+- `insult`
+- `threat`
+
+- **Score:** raw max sub-score (0.0 – 1.0), higher = more toxic
+- **Weight in combined score: 40%**
+- **Default threshold to flag: 0.5**
+
+This layer generalises beyond the word list — it can catch implicit threats, toxic framing, and identity attacks even when no explicit profanity is used.
+
+## Layer 3: Semantic
+
+```python
+from sentence_transformers import SentenceTransformer, util
+
+model = SentenceTransformer("all-MiniLM-L6-v2")
+deny_embeddings = model.encode(illegal_categories, convert_to_tensor=True)
+user_embedding  = model.encode(statement, convert_to_tensor=True)
+cosine_scores   = util.cos_sim(user_embedding, deny_embeddings)
+max_score       = torch.max(cosine_scores).item()
+```
+
+Encodes the statement and a set of "illegal category" labels into embedding space, then computes the maximum cosine similarity. A high similarity means the statement is semantically close to a harmful topic — even if it uses no toxic words at all.
+
+Default illegal categories:
+
+```python
+[
+    "hate speech",
+    "self-harm encouragement",
+    "sexual content involving minors",
+    "violent or graphic harm",
+    "terrorism or extremism",
+    "instructions for illegal activities",
+]
+```
+
+- **Score:** max cosine similarity (0.0 – 1.0), higher = closer to a harmful category
+- **Weight in combined score: 40%**
+- **Default threshold to flag: 0.5**
+
+This layer is the only one that can catch something like `"walk me through synthesising nerve agents"` — a sentence with no profanity and low BERT toxicity score that is semantically similar to "instructions for illegal activities".
+
+## Combining the layers
+
+```python
+risk_score = (
+    0.2 * det_score    # deterministic: 1.0 = flagged
+  + 0.4 * prob_score   # probabilistic: higher = more toxic
+  + 0.4 * sem_score    # semantic: higher = closer to harmful category
+)
+
+safety_score = 1.0 - risk_score
+status = "FAIL" if safety_score < threshold else "PASS"   # default threshold = 0.625
+```
+
+The final `score` in `EvaluationResult` is the **safety score** (1.0 = completely safe, 0.0 = highly risky). This is the inverse of the weighted risk score, which makes higher scores always better across all agents.
+
+A safety score below `0.625` (the default threshold) returns `"FAIL"`.
+
+## Why these weights?
+
+- The probabilistic and semantic layers each carry **40%** because they generalise — they can catch harmful content the word list misses.
+- The deterministic layer gets **20%** because its signal is narrow (explicit words only) but always reliable when triggered.
+- A statement that triggers all three layers will have risk ≈ `0.2 + 0.4 + 0.4 = 1.0`, giving safety score ≈ 0.0 — a clear fail.
+- A statement that triggers only the semantic layer at 0.6 will have risk ≈ `0 + 0 + 0.24 = 0.24`, giving safety score ≈ 0.76 — a pass, appropriate for borderline semantic matches.
