@@ -1,6 +1,9 @@
 config.ini
 .env
 
+# macOS
+.DS_Store
+
 # Python cache artifacts
 __pycache__/
 *.py[cod]
@@ -26,6 +29,10 @@ retrieval_output.txt
 
 # Test result logs
 tests/**/logs/
+
+# Node / docs
+node_modules/
+docs/.astro/
 
 # Claude settings
 .claude

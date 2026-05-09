@@ -1,0 +1,89 @@
+---
+title: LLMProvider
+description: Unified interface for calling any LLM provider via litellm.
+---
+
+import { Aside } from '@astrojs/starlight/components';
+
+`LLMProvider` wraps [litellm](https://docs.litellm.ai/docs/providers) to provide a single `call_api()` interface across 100+ LLM providers. It is the LLM used by `ValidationFramework` to generate responses, and is also used internally by `AccuracyAgent`, `RelevancyAgent`, and `BiasAgent` as the judge model.
+
+## Constructor
+
+```python
+LLMProvider(
+    provider: str,
+    model: str,
+    key: str,
+)
+```
+
+| Parameter | Type | Description |
+|---|---|---|
+| `provider` | `str` | Provider name as recognised by litellm (e.g. `"anthropic"`, `"openai"`, `"gemini"`). |
+| `model` | `str` | Model identifier (e.g. `"claude-haiku-4-5-20251001"`, `"gpt-4o"`). |
+| `key` | `str` | API key for the provider. |
+
+Internally, litellm receives the model as `"{provider}/{model}"` — e.g. `"anthropic/claude-haiku-4-5-20251001"`.
+
+## Methods
+
+### `call_api(query)`
+
+```python
+def call_api(query: str) -> str
+```
+
+Sends a single user message and returns the response text.
+
+## Examples
+
+### Basic usage
+
+```python
+from llm_validation_framework import LLMProvider
+from llm_validation_framework.config_loader import load_api_key
+
+api_key = load_api_key(provider="ANTHROPIC")
+llm = LLMProvider(provider="anthropic", model="claude-haiku-4-5-20251001", key=api_key)
+
+response = llm.call_api("What is the capital of France?")
+print(response)  # "The capital of France is Paris."
+```
+
+### Using OpenAI
+
+```python
+import os
+llm = LLMProvider(
+    provider="openai",
+    model="gpt-4o-mini",
+    key=os.environ["OPENAI_API_KEY"],
+)
+```
+
+### Provider list
+
+Any provider supported by litellm works. See the full list at [docs.litellm.ai/docs/providers](https://docs.litellm.ai/docs/providers). Common options:
+
+| Provider | `provider=` | Example `model=` |
+|---|---|---|
+| Anthropic | `"anthropic"` | `"claude-haiku-4-5-20251001"` |
+| OpenAI | `"openai"` | `"gpt-4o-mini"` |
+| Google | `"gemini"` | `"gemini-2.0-flash"` |
+
+---
+
+## DeepEvalLLMProvider
+
+`DeepEvalLLMProvider` is an internal adapter class that wraps `LLMProvider` to make it compatible with [deepeval](https://docs.confident-ai.com/)'s `GEval` metric. You do not need to use it directly — `AccuracyAgent`, `RelevancyAgent`, and `BiasAgent` create it automatically.
+
+```python
+class DeepEvalLLMProvider(DeepEvalBaseLLM):
+    def __init__(self, llm_provider: LLMProvider): ...
+    def generate(self, prompt: str) -> str: ...
+    async def a_generate(self, prompt: str) -> str: ...
+```
+
+<Aside type="note">
+If you want to use a different judge model than the one hardcoded in an agent, construct the agent with `provider=` and `model=` parameters (supported by `AccuracyAgent` and `RelevancyAgent`). The agent will create its own `DeepEvalLLMProvider` internally.
+</Aside>

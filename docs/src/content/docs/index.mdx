@@ -1,0 +1,67 @@
+---
+title: LLM Validation Framework
+description: Composable validation guardrails for your LLM pipelines.
+template: splash
+hero:
+  tagline: Composable validation guardrails for your LLM pipelines.
+  actions:
+    - text: Get Started
+      link: /llm-validation-framework/getting-started/
+      icon: right-arrow
+      variant: primary
+    - text: View on GitHub
+      link: https://github.com/tyeoh9/llm-validation-framework
+      icon: external
+---
+
+import { Card, CardGrid } from '@astrojs/starlight/components';
+
+## What it does
+
+LLM Validation Framework wraps your LLM calls in a composable pipeline of guardrails. Each guardrail is an independent agent that evaluates either the user's **input** or the model's **output** — returning a structured score and status that your application can act on.
+
+<CardGrid>
+  <Card title="Toxicity" icon="warning">
+    Three-layer harmful content detection — runs fully locally with no API calls. Catches profanity, ML-detected toxicity, and semantic similarity to illegal categories.
+  </Card>
+  <Card title="Privacy" icon="document">
+    Regex-based PII and secrets scanning. Detects SSNs, credit cards (Luhn-validated), API keys, and system prompt leakage — also local, no API calls.
+  </Card>
+  <Card title="Accuracy" icon="approve-check">
+    LLM-as-a-judge factual correctness check. Optionally grounded against your own document corpus via a RAG retriever.
+  </Card>
+  <Card title="Relevancy" icon="magnifier">
+    LLM-as-a-judge check that the answer actually addresses the question asked.
+  </Card>
+  <Card title="Bias" icon="information">
+    LLM-as-a-judge detection of stereotypes, discriminatory language, and unfair generalisations across protected traits.
+  </Card>
+</CardGrid>
+
+## Quick install
+
+```bash
+pip install validate-llm
+```
+
+## A minimal pipeline
+
+```python
+from llm_validation_framework import (
+    ValidationFramework, LLMProvider, Pipe,
+    ToxicityAgent, AccuracyAgent,
+)
+from llm_validation_framework.config_loader import load_api_key
+
+api_key = load_api_key(provider="ANTHROPIC")
+llm = LLMProvider(provider="anthropic", model="claude-haiku-4-5-20251001", key=api_key)
+
+input_guardrail  = Pipe(steps=[ToxicityAgent()], verbose=False)
+output_guardrail = Pipe(steps=[ToxicityAgent(), AccuracyAgent()], verbose=False)
+
+vf = ValidationFramework(llm=llm, input_guardrail=input_guardrail, output_guardrail=output_guardrail)
+result = vf.validate("What is the Pacific Ocean?")
+
+print(result["status"])  # "PASS" or "FAIL"
+print(result["score"])   # 0.0 – 1.0
+```

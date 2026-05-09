@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="720" height="120" viewBox="0 0 720 120" fill="none">
+  <rect width="720" height="120" fill="#0E0F12"></rect>
+  <text x="20" y="76" font-family="JetBrains Mono, ui-monospace, monospace" font-weight="500" font-size="40" textLength="312" lengthAdjust="spacingAndGlyphs" fill="#7A7972">$ pip install</text>
+  <text x="356" y="76" font-family="JetBrains Mono, ui-monospace, monospace" font-weight="700" font-size="40" textLength="288" lengthAdjust="spacingAndGlyphs" fill="#FAFAF7">validate-llm</text>
+  <rect x="356" y="86" width="288" height="4" fill="oklch(0.71 0.15 162)"></rect>
+</svg>

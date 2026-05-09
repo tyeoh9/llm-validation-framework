@@ -1,0 +1,134 @@
+---
+title: Getting Started
+description: Install the package, configure your API key, and run your first validation pipeline.
+---
+
+import { Tabs, TabItem, Aside } from '@astrojs/starlight/components';
+
+## Installation
+
+```bash
+pip install validate-llm
+```
+
+**Optional extras:**
+
+```bash
+pip install "validate-llm[demo]"   # FastAPI demo server + web UI
+pip install "validate-llm[test]"   # pytest + datasets
+pip install "validate-llm[dev]"    # everything
+```
+
+**Requirements:** Python 3.11+
+
+---
+
+## Configure your API key
+
+LLM-as-a-judge agents (`AccuracyAgent`, `RelevancyAgent`, `BiasAgent`) call an LLM to score responses, so they need an API key. `ToxicityAgent` and `PrivacyAgent` run entirely locally and need no key.
+
+Keys are resolved in this order:
+
+1. Environment variable `{PROVIDER}_API_KEY` (e.g. `ANTHROPIC_API_KEY`)
+2. `config.ini` at the path you pass to `load_api_key(config_path=...)`
+3. `config.ini` in the current working directory
+
+<Tabs>
+  <TabItem label="Environment variable (recommended)">
+    ```bash
+    export ANTHROPIC_API_KEY=sk-ant-...
+    ```
+  </TabItem>
+  <TabItem label="config.ini">
+    Create a `config.ini` file (keep it out of version control):
+    ```ini
+    [ANTHROPIC]
+    API_KEY=sk-ant-...
+    ```
+    Then load it explicitly:
+    ```python
+    from llm_validation_framework.config_loader import load_api_key
+
+    api_key = load_api_key(config_path="./config.ini", provider="ANTHROPIC")
+    ```
+  </TabItem>
+</Tabs>
+
+---
+
+## Your first pipeline
+
+The central class is `ValidationFramework`. It orchestrates the full flow:
+
+```
+user query → input guardrail → LLM → output guardrail → ValidationSummary
+```
+
+```python
+from llm_validation_framework import (
+    ValidationFramework,
+    LLMProvider,
+    Pipe,
+    ToxicityAgent,
+    AccuracyAgent,
+)
+from llm_validation_framework.config_loader import load_api_key
+
+# 1. Load credentials and create the LLM
+api_key = load_api_key(provider="ANTHROPIC")
+llm = LLMProvider(provider="anthropic", model="claude-haiku-4-5-20251001", key=api_key)
+
+# 2. Build guardrail pipelines
+input_guardrail  = Pipe(steps=[ToxicityAgent()], verbose=False)
+output_guardrail = Pipe(steps=[ToxicityAgent(), AccuracyAgent()], verbose=False)
+
+# 3. Create the framework and validate
+vf = ValidationFramework(
+    llm=llm,
+    input_guardrail=input_guardrail,
+    output_guardrail=output_guardrail,
+)
+
+result = vf.validate("What is the Pacific Ocean?")
+```
+
+---
+
+## Understanding the result
+
+`validate()` returns a `ValidationSummary` — a typed dict with this shape:
+
+```python
+{
+    "status": "PASS",          # Overall: "PASS" or "FAIL"
+    "score": 0.87,             # Average of input + output scores (0.0 – 1.0)
+    "input": {
+        "status": "PASS",
+        "score": 0.95,
+        "results": [
+            {"status": "PASS", "score": 0.95}  # one entry per agent in input_guardrail
+        ]
+    },
+    "output": {
+        "status": "PASS",
+        "score": 0.79,
+        "results": [
+            {"status": "PASS", "score": 0.93},                         # ToxicityAgent
+            {"status": "PASS", "score": 0.65, "reason": "..."}         # AccuracyAgent
+        ]
+    }
+}
+```
+
+<Aside type="note">
+If the input guardrail fails, `ValidationFramework` short-circuits: it skips the LLM call and the output guardrail entirely, returning an output score of `0.0` with reason `"Skipped: input guardrail failed"`.
+</Aside>
+
+---
+
+## Next steps
+
+- Learn about each agent: [ToxicityAgent](/llm-validation-framework/agents/toxicity/), [PrivacyAgent](/llm-validation-framework/agents/privacy/), [AccuracyAgent](/llm-validation-framework/agents/accuracy/)
+- Use agents standalone without `ValidationFramework` via [Pipe](/llm-validation-framework/core/pipe/)
+- Ground accuracy checks against your own documents: [RAG Integration](/llm-validation-framework/guides/rag-integration/)
+- Understand how scoring works under the hood: [Concepts](/llm-validation-framework/concepts/geval/)

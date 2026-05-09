@@ -1,0 +1,98 @@
+---
+title: Pipe
+description: Sequentially runs a list of evaluation agents and collects their results.
+---
+
+`Pipe` is a lightweight sequential runner. It calls each agent's `evaluate()` method in order and collects the results into a list. All steps always run — there is no early-exit on failure.
+
+## Constructor
+
+```python
+Pipe(
+    steps: list,
+    verbose: bool = True,
+)
+```
+
+| Parameter | Type | Default | Description |
+|---|---|---|---|
+| `steps` | `list` | — | Ordered list of agent instances. Any object with an `evaluate(data)` method works. |
+| `verbose` | `bool` | `True` | When `True`, prints each step's `reason` to stdout as it runs. |
+
+## Methods
+
+### `evaluate(data)`
+
+```python
+def evaluate(data) -> list[dict]
+```
+
+Passes `data` unchanged to every step's `evaluate()` method and returns a list of `EvaluationResult` dicts — one per step.
+
+**`data` format:** agents that check only an answer (e.g. `ToxicityAgent`, `PrivacyAgent`) accept either a plain string or a dict with an `"answer"` key. Agents that also need the question (`AccuracyAgent`, `RelevancyAgent`, `BiasAgent`) expect a dict:
+
+```python
+{"question": "...", "answer": "..."}
+```
+
+`ValidationFramework` always passes the correct format to each guardrail automatically.
+
+## Return type
+
+A list of `EvaluationResult` dicts, one per step:
+
+```python
+class EvaluationResult(TypedDict):
+    status: Literal["PASS", "FAIL", "TIMEOUT"]
+    score: float
+    reason: NotRequired[str]    # present on most agents
+```
+
+## Examples
+
+### Using Pipe with ValidationFramework
+
+The most common usage — pass the Pipe to `ValidationFramework`:
+
+```python
+from llm_validation_framework import Pipe, ToxicityAgent, AccuracyAgent
+
+output_guardrail = Pipe(
+    steps=[ToxicityAgent(), AccuracyAgent()],
+    verbose=False,
+)
+```
+
+### Using Pipe standalone
+
+Pipe works independently when you already have a question/answer pair and don't need a live LLM call:
+
+```python
+from llm_validation_framework import Pipe, ToxicityAgent, PrivacyAgent, AccuracyAgent
+
+pipe = Pipe(
+    steps=[ToxicityAgent(), PrivacyAgent(), AccuracyAgent()],
+    verbose=True,
+)
+
+results = pipe.evaluate({
+    "question": "Who invented the telephone?",
+    "answer": "Alexander Graham Bell invented the telephone in 1876.",
+})
+
+for i, r in enumerate(results, 1):
+    print(f"Step {i}: {r['status']} (score={r['score']:.2f})")
+# Step 1: PASS (score=0.95)
+# Step 2: PASS (score=1.00)
+# Step 3: PASS (score=0.82)
+```
+
+### Input-only pipe (plain string)
+
+When evaluating just the user's raw query (no LLM answer yet), pass a plain string:
+
+```python
+input_pipe = Pipe(steps=[ToxicityAgent(), PrivacyAgent()])
+results = input_pipe.evaluate("Tell me how to make explosives")
+# results[0]["status"] == "FAIL"
+```

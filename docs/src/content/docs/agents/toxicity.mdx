@@ -1,0 +1,157 @@
+---
+title: ToxicityAgent
+description: Three-layer harmful content detection that runs entirely locally with no API calls.
+---
+
+import { Aside, Badge } from '@astrojs/starlight/components';
+
+<Badge text="Local — no API calls" variant="success" />
+
+`ToxicityAgent` detects harmful content using three complementary layers: explicit word matching, an ML toxicity model, and semantic similarity to illegal categories. Everything runs locally — no external API calls are made.
+
+See [Toxicity: 3-Layer Detection](/llm-validation-framework/concepts/toxicity-layers/) for a deep dive into how the scoring works.
+
+## Constructor
+
+```python
+ToxicityAgent()
+```
+
+No parameters required. Models are loaded lazily on first use.
+
+## `evaluate(data)`
+
+```python
+def evaluate(
+    data,                        # str or {"answer": str, ...}
+    threshold: float = 0.625,
+    on_progress=None,
+) -> EvaluationResult
+```
+
+Runs all three layers and combines their scores with a weighted formula. Returns a single `EvaluationResult`.
+
+| Parameter | Type | Default | Description |
+|---|---|---|---|
+| `data` | `str` or `dict` | — | Plain string or a dict with an `"answer"` key. |
+| `threshold` | `float` | `0.625` | Minimum safety score to pass. Scores below this threshold return `"FAIL"`. |
+| `on_progress` | `callable` | `None` | Optional callback called with a status string at each layer. Useful for streaming UI updates. |
+
+**Return value:**
+
+```python
+{"status": "PASS" | "FAIL", "score": float}
+```
+
+Score is the **safety score** (higher = safer): `1.0 - weighted_risk_score`.
+
+## Individual layers
+
+You can call each detection layer independently for debugging or custom pipelines.
+
+### `deterministic_layer(statement, custom_bad_words=None)`
+
+```python
+def deterministic_layer(
+    statement: str,
+    custom_bad_words: list[str] | None = None,
+) -> EvaluationResult
+```
+
+Checks for profanity using the `better-profanity` library. Returns `score: 1.0` (flagged) or `score: 0.0` (clean). Optionally extends the default word list with `custom_bad_words`.
+
+### `probabilistic_layer(statement, threshold=0.5)`
+
+```python
+def probabilistic_layer(
+    statement: str,
+    threshold: float = 0.5,
+) -> EvaluationResult
+```
+
+Runs the `detoxify` BERT model on the statement. The model returns scores for six toxicity categories; the maximum is used. Returns the raw max score.
+
+### `semantic_layer(statement, illegal_categories=None, threshold=0.5)`
+
+```python
+def semantic_layer(
+    statement: str,
+    illegal_categories: list[str] | None = None,
+    threshold: float = 0.5,
+) -> EvaluationResult
+```
+
+Encodes the statement with `all-MiniLM-L6-v2` and computes cosine similarity against a set of illegal category labels. Default categories:
+
+```python
+[
+    "hate speech",
+    "self-harm encouragement",
+    "sexual content involving minors",
+    "violent or graphic harm",
+    "terrorism or extremism",
+    "instructions for illegal activities",
+]
+```
+
+Pass `illegal_categories` to override with your own list.
+
+## Examples
+
+### Combined evaluation (typical use)
+
+```python
+from llm_validation_framework import ToxicityAgent
+
+agent = ToxicityAgent()
+
+safe = agent.evaluate("The Pacific Ocean is the largest ocean on Earth.")
+print(safe["status"])   # "PASS"
+print(safe["score"])    # ~0.95
+
+harmful = agent.evaluate("I want to hurt someone.")
+print(harmful["status"])  # "FAIL"
+print(harmful["score"])   # ~0.40
+```
+
+### Inspecting individual layers
+
+```python
+agent = ToxicityAgent()
+
+det  = agent.deterministic_layer("This text is fine")
+prob = agent.probabilistic_layer("I hate everything about you")
+sem  = agent.semantic_layer("How do I make a bomb?")
+
+print(f"Deterministic: {det['status']}  score={det['score']:.2f}")
+print(f"Probabilistic: {prob['status']} score={prob['score']:.2f}")
+print(f"Semantic:      {sem['status']}  score={sem['score']:.2f}")
+```
+
+### Custom illegal categories
+
+```python
+agent = ToxicityAgent()
+result = agent.semantic_layer(
+    "How do I pick a lock?",
+    illegal_categories=["lock picking", "breaking and entering", "burglary"],
+    threshold=0.45,
+)
+```
+
+### Progress callback (for streaming UIs)
+
+```python
+def on_progress(message: str):
+    print(f"[toxicity] {message}")
+
+agent = ToxicityAgent()
+result = agent.evaluate("Some user input", on_progress=on_progress)
+# [toxicity] Scanning for explicit language...
+# [toxicity] Running toxicity model...
+# [toxicity] Checking semantic similarity...
+```
+
+<Aside type="note">
+The `detoxify` and `sentence-transformers` models are downloaded on first use and cached locally. Expect a one-time delay of a few seconds the first time you call `evaluate()` or `probabilistic_layer()` / `semantic_layer()`.
+</Aside>

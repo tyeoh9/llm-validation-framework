@@ -1,0 +1,138 @@
+---
+title: RAG Integration
+description: Ground AccuracyAgent's factual checks against your own document corpus using RAGProvider.
+---
+
+import { Aside, Steps } from '@astrojs/starlight/components';
+
+By default, `AccuracyAgent` asks the judge LLM to assess factual correctness using its own general knowledge. When you have a specific knowledge base — internal docs, a product FAQ, research papers — you can pass a `RAGProvider` so the factual check is **grounded against retrieved documents** instead.
+
+## How it works
+
+When `AccuracyAgent` has a `RAGProvider`:
+
+1. Before the factual check, it calls `rag.extract_content(question)` to fetch the most relevant document
+2. That document is passed as `context` to the `GEval` test case
+3. The judge is instructed to treat the retrieved context as the **source of truth** — answers that contradict the context fail even if they'd be correct from general knowledge
+
+Without RAG, step 1-2 are skipped and the judge uses its own knowledge.
+
+## RAGProvider
+
+```python
+class RAGProvider:
+    def __init__(self, retriever: Any): ...
+    def extract_content(self, query: str) -> str | None: ...
+    def get_most_relevant_doc(self, query: str) -> Document | None: ...
+```
+
+`RAGProvider` is a thin wrapper around any **LangChain-compatible retriever** — any object that implements:
+
+```python
+retriever.invoke(query: str) -> List[Document]
+```
+
+It picks the first (highest-ranked) document and returns its `.page_content`. If the retriever returns nothing, `extract_content` returns `None` and the factual check falls back to the judge's own knowledge.
+
+## Step-by-step setup
+
+<Steps>
+
+1. **Install LangChain and a vector store**
+
+   ```bash
+   pip install langchain-community chromadb
+   ```
+
+2. **Build or load your vector store**
+
+   ```python
+   from langchain_community.vectorstores import Chroma
+   from langchain_community.embeddings import HuggingFaceEmbeddings
+
+   embeddings = HuggingFaceEmbeddings(model_name="all-MiniLM-L6-v2")
+
+   # Create from documents
+   vectorstore = Chroma.from_texts(
+       texts=[
+           "Acme Corp was founded in 2005 by Alice Johnson.",
+           "The company's flagship product is the Acme Widget Pro.",
+           "Acme Corp is headquartered in San Francisco, California.",
+       ],
+       embedding=embeddings,
+   )
+   ```
+
+3. **Wrap the retriever in RAGProvider**
+
+   ```python
+   from llm_validation_framework import RAGProvider
+
+   retriever = vectorstore.as_retriever(search_kwargs={"k": 3})
+   rag = RAGProvider(retriever)
+   ```
+
+4. **Pass it to AccuracyAgent**
+
+   ```python
+   from llm_validation_framework import AccuracyAgent
+
+   agent = AccuracyAgent(rag=rag)
+
+   result = agent.evaluate({
+       "question": "Who founded Acme Corp?",
+       "answer": "Alice Johnson founded Acme Corp.",
+   })
+
+   print(result["status"])  # "PASS" — matches the retrieved document
+   ```
+
+5. **Or use it in a full pipeline**
+
+   ```python
+   from llm_validation_framework import (
+       ValidationFramework, LLMProvider, Pipe,
+       ToxicityAgent, AccuracyAgent, RAGProvider,
+   )
+   from llm_validation_framework.config_loader import load_api_key
+
+   api_key = load_api_key(provider="ANTHROPIC")
+   llm = LLMProvider(provider="anthropic", model="claude-haiku-4-5-20251001", key=api_key)
+
+   rag = RAGProvider(vectorstore.as_retriever())
+
+   output_guardrail = Pipe(steps=[
+       ToxicityAgent(),
+       AccuracyAgent(rag=rag),
+   ], verbose=False)
+
+   vf = ValidationFramework(
+       llm=llm,
+       input_guardrail=Pipe(steps=[ToxicityAgent()], verbose=False),
+       output_guardrail=output_guardrail,
+   )
+
+   result = vf.validate("Who founded Acme Corp?")
+   ```
+
+</Steps>
+
+## Supported retrievers
+
+Any object with an `invoke(query: str) -> List[Document]` method works. This includes all LangChain retrievers:
+
+| Retriever | Notes |
+|---|---|
+| `Chroma.as_retriever()` | Local vector store, easy to set up |
+| `FAISS.as_retriever()` | Fast in-memory retrieval |
+| `PineconeVectorStore.as_retriever()` | Cloud-hosted, scalable |
+| `BM25Retriever` | Keyword-based, no embeddings needed |
+| Custom retriever | Implement `.invoke(query: str) -> List[Document]` |
+
+<Aside type="tip">
+`RAGProvider` uses only the **top-1 retrieved document** as context. If your retriever returns multiple documents, only the first is used. For better recall, tune your retriever's `k` or ranking before wrapping it.
+</Aside>
+
+<Aside type="caution">
+If the retriever returns no documents, `AccuracyAgent` silently falls back to judge-based evaluation (no RAG grounding). This means a missing or poorly configured retriever won't cause an error — it just won't ground the check. Monitor retrieval quality separately.
+</Aside>
