@@ -7,11 +7,23 @@ import { Aside } from '@astrojs/starlight/components';
 
 Three of the five agents in this framework — `AccuracyAgent`, `RelevancyAgent`, and `BiasAgent` — use a technique called **LLM-as-a-judge**. Rather than comparing an answer against a fixed rubric or computing embedding similarity, they ask a second LLM to score the response according to a set of natural-language criteria.
 
+<Aside type="tip" label="Why LLM-as-a-judge wins">
+The original [G-Eval paper](https://arxiv.org/abs/2303.16634) (Liu et al., 2023) benchmarked GPT-4-based evaluation against classical metrics on the SummEval summarisation dataset using **Spearman correlation with human judgements**:
+
+| Metric | Coherence | Consistency |
+|---|---|---|
+| ROUGE-1 | 0.390 | 0.244 |
+| BERTScore | 0.392 | 0.273 |
+| **G-Eval (GPT-4)** | **0.514** | **0.507** |
+
+G-Eval outperforms the best traditional metric by **+31% on coherence** and **+86% on consistency** — the tasks most similar to what this framework evaluates.
+</Aside>
+
 This page explains how that works internally.
 
 ## What is GEval?
 
-[GEval](https://docs.confident-ai.com/docs/metrics-llm-evals) is a metric from the [deepeval](https://github.com/confident-ai/deepeval) library. It takes:
+[GEval](https://arxiv.org/abs/2303.16634) is a prompting framework introduced by Liu et al. (2023) and implemented in the [deepeval](https://github.com/confident-ai/deepeval) library. It takes:
 
 - A **name** for the metric
 - A list of **evaluation steps** — natural-language instructions for the judge
@@ -110,10 +122,10 @@ It satisfies deepeval's abstract interface by delegating to `LLMProvider.call_ap
 ## Why LLM-as-a-judge?
 
 **Compared to embedding similarity:**  
-Embedding-based approaches (e.g. cosine similarity between answer and reference) measure semantic closeness but can't reason about factual correctness, relevance nuance, or the difference between a stereotype and a factual statement. LLM-as-a-judge handles all of these.
+Embedding-based approaches (e.g. BERTScore) measure semantic closeness but can't reason about factual correctness, relevance nuance, or the difference between a stereotype and a factual statement. The [G-Eval paper](https://arxiv.org/abs/2303.16634) found BERTScore achieves only 0.273 Spearman correlation with human judgements on consistency — GPT-4 reaches 0.507 on the same benchmark.
 
-**Compared to exact-match:**  
-Exact-match fails on paraphrases and synonyms. An answer of "Paris" and "The capital is Paris, France" are semantically equivalent but textually different.
+**Compared to exact-match and ROUGE:**  
+These fail on paraphrases and synonyms. An answer of "Paris" and "The capital is Paris, France" are semantically equivalent but textually different. ROUGE-1 scores 0.390 on coherence vs 0.514 for G-Eval.
 
 **Tradeoffs:**
 - LLM-as-a-judge adds latency (an extra API call per evaluation)
