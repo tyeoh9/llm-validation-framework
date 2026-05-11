@@ -10,7 +10,7 @@
 [![Docs](https://img.shields.io/badge/docs-tyeoh9.github.io-blue)](https://tyeoh9.github.io/llm-validation-framework)
 [![License](https://img.shields.io/badge/license-MIT-green)](LICENSE)
 
-Composable validation guardrails for LLM pipelines — accuracy, relevancy, toxicity, privacy, and bias checks in one pipeline.
+A plug and play Python library for developers to wrap around any LLM to safeguard the inputs and outputs. It detects accuracy, relevancy, toxicity, privacy, and bias checks in one pipeline.
 
 **[Documentation →](https://tyeoh9.github.io/llm-validation-framework)**
 
