@@ -51,6 +51,20 @@ print(result["status"], result["score"])  # PASS 0.87
 
 `validate()` returns a structured dict with `status`, `score`, and per-agent `results` for both the input and output guardrails. See the [docs](https://tyeoh9.github.io/llm-validation-framework/core/validation-framework/) for the full schema.
 
+## Demo
+
+The demo is a FastAPI backend + static web UI.
+
+```bash
+# Terminal 1
+uvicorn demo.api_server:app --host 127.0.0.1 --port 5050
+
+# Terminal 2
+python demo/serve_ui.py
+```
+
+Open `http://127.0.0.1:8000`.
+
 ## Agents
 
 | Agent | What it does | Needs API key |
@@ -89,20 +103,6 @@ accuracy = AccuracyAgent(rag=RAGProvider(your_vectorstore.as_retriever()))
 ```
 
 See the [RAG Integration guide](https://tyeoh9.github.io/llm-validation-framework/guides/rag-integration/) for a full walkthrough.
-
-## Demo
-
-The demo is a FastAPI backend + static web UI.
-
-```bash
-# Terminal 1
-uvicorn demo.api_server:app --host 127.0.0.1 --port 5050
-
-# Terminal 2
-python demo/serve_ui.py
-```
-
-Open `http://127.0.0.1:8000`.
 
 ## Contributors
 
