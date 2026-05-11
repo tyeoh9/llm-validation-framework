@@ -1,9 +1,14 @@
 <picture>
-  <source media="(prefers-color-scheme: dark)" srcset="brand/pip-install-dark.svg">
-  <img alt="pip install validate-llm" src="brand/pip-install.svg" width="560">
+  <source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/tyeoh9/llm-validation-framework/main/brand/pip-install-dark.svg">
+  <img alt="pip install validate-llm" src="https://raw.githubusercontent.com/tyeoh9/llm-validation-framework/main/brand/pip-install.svg" width="560">
 </picture>
 
 <br>
+
+[![PyPI](https://img.shields.io/pypi/v/validate-llm)](https://pypi.org/project/validate-llm/)
+[![Python](https://img.shields.io/pypi/pyversions/validate-llm)](https://pypi.org/project/validate-llm/)
+[![Docs](https://img.shields.io/badge/docs-tyeoh9.github.io-blue)](https://tyeoh9.github.io/llm-validation-framework)
+[![License](https://img.shields.io/badge/license-MIT-green)](LICENSE)
 
 Composable validation guardrails for LLM pipelines — accuracy, relevancy, toxicity, privacy, and bias checks in one pipeline.
 
