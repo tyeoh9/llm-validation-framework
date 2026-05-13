@@ -1,5 +1,5 @@
 import re
-
+import datafog
 from llm_validation_framework.models import EvaluationResult
 
 PATTERNS = {
@@ -41,8 +41,9 @@ class PrivacyAgent:
 
     name = "Privacy check"
 
-    def __init__(self, system_prompt: str | None = None):
+    def __init__(self, system_prompt: str | None = None, threshold: int):
         self._system_prompt = system_prompt
+        self.T = threshold
 
     def evaluate(self, data, on_progress=None) -> EvaluationResult:
         """Scan the answer for sensitive patterns."""
@@ -82,3 +83,72 @@ class PrivacyAgent:
             }
 
         return {"status": "PASS", "score": 1.0, "reason": "No sensitive data detected."}
+    #Quick method that cleans away dates and SSIDs quickly
+    def preliminary_censor(self,text):
+        try:
+          if text == '':
+            return {'status': 'PASS', 'score': 0}
+          cleaned_text = datafog.sanitize(text, engine="regex")
+          replaced_words = 0
+          total_words = 0
+          for word in text.split():
+            if word not in cleaned_text:
+              replaced_words += 1
+            total_words += 1
+          if replaced_words/total_words > self.T:
+            return {'status':'FAIL','score': replaced_words / total_words, 'reason' = ''}
+          return {'status': 'PASS', 'score': replaced_words / total_words, 'reason' = ''}
+        except Exception as e:
+          print(f"Error in preliminary_censor: {e}")
+          return text
+    #More in-depth method that sanitizes names, companies, and more information in addition to dates and SSIDs.
+    def in_depth_censor(self,text):
+        try:
+          if text == '':
+            return {'status': 'PASS', 'score': 0, 'reason' = ''}
+          cleaned_text = datafog.sanitize(text, engine="smart")
+          replaced_words = 0
+          total_words = 0
+          for word in text.split():
+            if word not in cleaned_text:
+              replaced_words += 1
+            total_words += 1
+          if replaced_words/total_words > self.T:
+            return {'status':'FAIL','score': replaced_words / total_words, 'reason' = ''}
+          return {'status': 'PASS', 'score': replaced_words / total_words, 'reason' = ''}
+        except Exception as e:
+          print(f"Error in in_depth_censor: {e}")
+          return text
+    #Custom censor where the client can choose what words or regex expressions to replace as well as their replacements
+    def custom_regex_censor(self,text,bad_words = [],replacements = []):
+        if text == '':
+            return {'status': 'PASS', 'score': 0, 'reason' = ''}
+            
+        if len(bad_words) != len(replacements):
+          raise ValueError("bad_words and replacements must be the same length in custom_regex_censor")
+    
+        cleaned_text = text
+        for bad_word, replacement in zip(bad_words,replacements):
+          cleaned_text = re.sub(bad_word,replacement,cleaned_text,flags=re.IGNORECASE)
+    
+        replaced_words = 0
+        total_words = 0
+        for word in text.split():
+            if word not in cleaned_text:
+              replaced_words += 1
+            total_words += 1
+        if replaced_words/total_words > self.T:
+          return {'status':'FAIL','score': replaced_words / total_words, 'reason' = ''}
+        return {'status': 'PASS', 'score': replaced_words / total_words, 'reason' = ''}
+
+    #Combines the top 3 into one method for ease of use
+    def complete_censor(self,text,bad_words=[],replacements=[]):
+        A = self.preliminary_censor(text)
+        B = self.in_depth_censor(text)
+        C = self.custom_regex_censor(text,bad_words,replacements)
+        if A['status'] == 'FAIL' or B['status'] == 'FAIL' or C['status'] == 'FAIL':
+          return {'status': 'FAIL', 'score': (A['score']+B['score']+C['score'])/3, 'reason' = ''}
+        return {'status': 'PASS', 'score': (A['score']+B['score']+C['score'])/3, 'reason' = ''}
+
+
+  
