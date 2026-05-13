@@ -22,13 +22,7 @@ A plug and play Python library for developers to wrap around any LLM to safeguar
 pip install validate-llm
 ```
 
-Requires Python 3.11+. Optional extras:
-
-```bash
-pip install "validate-llm[demo]"   # FastAPI demo server + web UI
-pip install "validate-llm[test]"   # pytest + datasets
-pip install "validate-llm[dev]"    # everything
-```
+Requires Python 3.11+.
 
 ## Quick start
 
@@ -79,8 +73,12 @@ Open `http://127.0.0.1:8000`.
 
 ## Config
 
+Set the API key for your chosen provider:
+
 ```bash
-export ANTHROPIC_API_KEY=your-key
+export ANTHROPIC_API_KEY=your-key   # Anthropic (default)
+export OPENAI_API_KEY=your-key      # OpenAI
+export GEMINI_API_KEY=your-key      # Google
 ```
 
 Or create a `config.ini` at the repo root (gitignored):
@@ -88,9 +86,17 @@ Or create a `config.ini` at the repo root (gitignored):
 ```ini
 [ANTHROPIC]
 API_KEY=your-key
+
+[OPENAI]
+API_KEY=your-key
 ```
 
-Supported providers follow [litellm's naming](https://docs.litellm.ai/docs/providers).
+Any provider supported by [litellm](https://docs.litellm.ai/docs/providers) works. Pass `provider=` and `model=` to any LLM-as-a-judge agent to switch:
+
+```python
+AccuracyAgent(provider="openai", model="gpt-4o-mini")
+BiasAgent(provider="gemini", model="gemini-2.0-flash")
+```
 
 ## RAG grounding
 
