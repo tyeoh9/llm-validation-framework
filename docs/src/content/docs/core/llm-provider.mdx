@@ -85,5 +85,5 @@ class DeepEvalLLMProvider(DeepEvalBaseLLM):
 ```
 
 <Aside type="note">
-If you want to use a different judge model than the one hardcoded in an agent, construct the agent with `provider=` and `model=` parameters (supported by `AccuracyAgent` and `RelevancyAgent`). The agent will create its own `DeepEvalLLMProvider` internally.
+If you want to use a different judge model, construct the agent with `provider=` and `model=` parameters (supported by `AccuracyAgent`, `RelevancyAgent`, and `BiasAgent`). The agent will create its own `DeepEvalLLMProvider` internally.
 </Aside>
