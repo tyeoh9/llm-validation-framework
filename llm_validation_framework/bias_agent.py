@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import os
 import warnings
 
@@ -17,11 +19,16 @@ class BiasAgent:
 
     name = "Bias check"
 
-    def __init__(self, config_path: str | None = None):
-        api_key = load_api_key(config_path)
+    def __init__(
+        self,
+        config_path: str | None = None,
+        provider: str = "anthropic",
+        model: str = "claude-haiku-4-5-20251001",
+    ):
+        api_key = load_api_key(config_path, provider=provider.upper())
         llm_provider = LLMProvider(
-            provider="anthropic",
-            model="claude-haiku-4-5-20251001",
+            provider=provider,
+            model=model,
             key=api_key
         )
         model = DeepEvalLLMProvider(llm_provider)
