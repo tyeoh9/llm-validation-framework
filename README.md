@@ -10,7 +10,7 @@
 [![Docs](https://img.shields.io/badge/docs-tyeoh9.github.io-blue)](https://tyeoh9.github.io/llm-validation-framework)
 [![License](https://img.shields.io/badge/license-MIT-green)](LICENSE)
 
-A plug and play Python library for developers to wrap around any LLM to safeguard the inputs and outputs. It detects accuracy, relevancy, toxicity, privacy, and bias checks in one pipeline.
+Bring your own LLM — `validate-llm` wraps it with configurable input and output guardrails. Pass any provider and model (Anthropic, OpenAI, Gemini, and [100+ more](https://docs.litellm.ai/docs/providers)), and get structured validation results for toxicity, privacy, accuracy, relevancy, and bias.
 
 **[Documentation →](https://tyeoh9.github.io/llm-validation-framework)**
 
