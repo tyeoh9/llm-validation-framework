@@ -12,16 +12,18 @@ import { Aside, Badge } from '@astrojs/starlight/components';
 ## Constructor
 
 ```python
-BiasAgent(config_path: str | None = None)
+BiasAgent(
+    config_path: str | None = None,
+    provider: str = "anthropic",
+    model: str = "claude-haiku-4-5-20251001",
+)
 ```
 
 | Parameter | Type | Default | Description |
 |---|---|---|---|
-| `config_path` | `str \| None` | `None` | Path to `config.ini` for API key loading. Falls back to `ANTHROPIC_API_KEY` env var. |
-
-<Aside type="note">
-`BiasAgent` currently uses Anthropic Claude Haiku as the judge model. The provider and model are not configurable through the constructor.
-</Aside>
+| `config_path` | `str \| None` | `None` | Path to `config.ini` for API key loading. Falls back to the provider's env var (e.g. `ANTHROPIC_API_KEY`). |
+| `provider` | `str` | `"anthropic"` | LLM provider for the judge model (e.g. `"openai"`, `"gemini"`). |
+| `model` | `str` | `"claude-haiku-4-5-20251001"` | Model identifier for the judge model. |
 
 ## `evaluate(data)`
 
