@@ -33,10 +33,12 @@ class AccuracyAgent:
         provider: str = "anthropic",
         model: str = "claude-haiku-4-5-20251001",
         rag: Optional[RAGProvider] = None,
+        threshold: float = 0.5,
     ):
         self.config_path = config_path
         self.rag = rag
-        self._relevancy = RelevancyAgent(config_path=config_path, provider=provider, model=model)
+        self.threshold = threshold
+        self._relevancy = RelevancyAgent(config_path=config_path, provider=provider, model=model, threshold=threshold)
 
         api_key = load_api_key(config_path, provider=provider.upper())
         llm_provider = LLMProvider(provider=provider, model=model, key=api_key)
@@ -71,9 +73,15 @@ class AccuracyAgent:
             evaluation_steps=evaluation_steps,
             evaluation_params=evaluation_params,
             model=judge_model,
-            threshold=0.5,
+            threshold=threshold,
             verbose_mode=False,
         )
+
+    def update_threshold(self, threshold: float) -> None:
+        """Update the pass/fail threshold. Use only if you need domain-specific tuning — the default works for most cases."""
+        self.threshold = threshold
+        self.factual_metric.threshold = threshold
+        self._relevancy.update_threshold(threshold)
 
     def evaluate(self, data, on_progress=None) -> EvaluationResult:
         """Run relevancy + factual checks and return a combined result."""
@@ -108,7 +116,7 @@ class AccuracyAgent:
         fact_reason = getattr(self.factual_metric, "reason", "")
 
         combined = RELEVANCY_WEIGHT * rel_score + FACTUAL_WEIGHT * fact_score
-        status = "PASS" if combined >= 0.5 else "FAIL"
+        status = "PASS" if combined >= self.threshold else "FAIL"
 
         return {
             "status": status,

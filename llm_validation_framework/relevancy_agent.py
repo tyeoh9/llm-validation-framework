@@ -17,7 +17,13 @@ class RelevancyAgent:
 
     name = "Relevancy check"
 
-    def __init__(self, config_path: str | None = None, provider: str = "anthropic", model: str = "claude-haiku-4-5-20251001"):
+    def __init__(
+        self,
+        config_path: str | None = None,
+        provider: str = "anthropic",
+        model: str = "claude-haiku-4-5-20251001",
+        threshold: float = 0.5,
+    ):
         api_key = load_api_key(config_path, provider=provider.upper())
         llm_provider = LLMProvider(provider=provider, model=model, key=api_key)
         judge_model = DeepEvalLLMProvider(llm_provider)
@@ -35,9 +41,13 @@ class RelevancyAgent:
                 LLMTestCaseParams.ACTUAL_OUTPUT,
             ],
             model=judge_model,
-            threshold=0.5,
+            threshold=threshold,
             verbose_mode=False,
         )
+
+    def update_threshold(self, threshold: float) -> None:
+        """Update the pass/fail threshold. Use only if you need domain-specific tuning — the default works for most cases."""
+        self.relevancy_metric.threshold = threshold
 
     def evaluate(self, data, on_progress=None) -> EvaluationResult:
         """Evaluate how relevant the answer is to the question."""

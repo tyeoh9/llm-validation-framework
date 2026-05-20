@@ -19,9 +19,14 @@ class ToxicityAgent:
 
     name = "Harmful content check"
 
-    def __init__(self):
+    def __init__(self, threshold: float = 0.625):
         self._detoxify_model = None
         self._sentence_model = None
+        self.threshold = threshold
+
+    def update_threshold(self, threshold: float) -> None:
+        """Update the pass/fail threshold. Use only if you need domain-specific tuning — the default works for most cases."""
+        self.threshold = threshold
 
     def deterministic_layer(
         self, statement: str, custom_bad_words: list[str] | None = None
@@ -36,20 +41,22 @@ class ToxicityAgent:
         score = 1.0 if flagged else 0.0
         return {"status": status, "score": score}
 
-    def probabilistic_layer(self, statement: str, threshold: float = 0.5) -> EvaluationResult:
+    def probabilistic_layer(self, statement: str, threshold: float | None = None) -> EvaluationResult:
+        effective = threshold if threshold is not None else self.threshold
         if self._detoxify_model is None:
             self._detoxify_model = Detoxify("original")
         tox_scores = self._detoxify_model.predict(statement)
         max_tox_score = max(tox_scores.values()) if tox_scores else 0.0
-        status = "FAIL" if max_tox_score > threshold else "PASS"
+        status = "FAIL" if max_tox_score > effective else "PASS"
         return {"status": status, "score": float(max_tox_score)}
 
     def semantic_layer(
         self,
         statement: str,
         illegal_categories: list[str] | None = None,
-        threshold: float = 0.5,
+        threshold: float | None = None,
     ) -> EvaluationResult:
+        effective = threshold if threshold is not None else self.threshold
         if self._sentence_model is None:
             self._sentence_model = SentenceTransformer("all-MiniLM-L6-v2")
 
@@ -70,20 +77,21 @@ class ToxicityAgent:
         cosine_scores = util.cos_sim(user_embedding, deny_embeddings)
         max_score = torch.max(cosine_scores).item()
 
-        status = "FAIL" if max_score > threshold else "PASS"
+        status = "FAIL" if max_score > effective else "PASS"
         return {"status": status, "score": float(max_score)}
 
-    def evaluate(self, data, threshold: float = 0.625, on_progress=None) -> EvaluationResult:
+    def evaluate(self, data, threshold: float | None = None, on_progress=None) -> EvaluationResult:
+        effective = threshold if threshold is not None else self.threshold
         statement = data["answer"] if isinstance(data, dict) else data
         if on_progress:
             on_progress("Scanning for explicit language...")
         det_result = self.deterministic_layer(statement)
         if on_progress:
             on_progress("Running toxicity model...")
-        prob_result = self.probabilistic_layer(statement, threshold=threshold)
+        prob_result = self.probabilistic_layer(statement, threshold=effective)
         if on_progress:
             on_progress("Checking semantic similarity...")
-        sem_result = self.semantic_layer(statement, threshold=threshold)
+        sem_result = self.semantic_layer(statement, threshold=effective)
 
         risk_score = 1.0 - (
             0.2 * det_result["score"] +
@@ -91,5 +99,5 @@ class ToxicityAgent:
             0.4 * sem_result["score"]
         )
 
-        status = "FAIL" if risk_score < threshold else "PASS"
+        status = "FAIL" if risk_score < effective else "PASS"
         return {"status": status, "score": float(risk_score)}
