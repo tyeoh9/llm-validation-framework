@@ -14,17 +14,37 @@ See [Toxicity: 3-Layer Detection](/llm-validation-framework/concepts/toxicity-la
 ## Constructor
 
 ```python
-ToxicityAgent()
+ToxicityAgent(threshold: float = 0.625)
 ```
 
-No parameters required. Models are loaded lazily on first use.
+| Parameter | Type | Default | Description |
+|---|---|---|---|
+| `threshold` | `float` | `0.625` | Minimum safety score required to pass. Applied to the combined weighted score. See note below before changing this. |
+
+Models are loaded lazily on first use.
+
+## `update_threshold(threshold)`
+
+```python
+def update_threshold(self, threshold: float) -> None
+```
+
+Updates the pass/fail threshold after construction. Useful when evaluating the same agent against datasets from different domains without re-instantiating it.
+
+| Parameter | Type | Description |
+|---|---|---|
+| `threshold` | `float` | New minimum safety score to pass. Must be in `[0.0, 1.0]`. |
+
+<Aside type="caution" title="Advanced use only">
+The default threshold of `0.625` is calibrated to work well across general-purpose use cases. Only override it if your domain requires stricter or more lenient scoring **and you have validated the new value against labelled data**. Incorrect thresholds can significantly increase false-positive or false-negative rates.
+</Aside>
 
 ## `evaluate(data)`
 
 ```python
 def evaluate(
-    data,                        # str or {"answer": str, ...}
-    threshold: float = 0.625,
+    data,                         # str or {"answer": str, ...}
+    threshold: float | None = None,
     on_progress=None,
 ) -> EvaluationResult
 ```
@@ -34,7 +54,7 @@ Runs all three layers and combines their scores with a weighted formula. Returns
 | Parameter | Type | Default | Description |
 |---|---|---|---|
 | `data` | `str` or `dict` | — | Plain string or a dict with an `"answer"` key. |
-| `threshold` | `float` | `0.625` | Minimum safety score to pass. Scores below this threshold return `"FAIL"`. |
+| `threshold` | `float \| None` | `None` | Override the instance threshold for this call only. When `None`, uses the threshold set at construction (or via `update_threshold`). |
 | `on_progress` | `callable` | `None` | Optional callback called with a status string at each layer. Useful for streaming UI updates. |
 
 **Return value:**
@@ -60,24 +80,24 @@ def deterministic_layer(
 
 Checks for profanity using the `better-profanity` library. Returns `score: 1.0` (flagged) or `score: 0.0` (clean). Optionally extends the default word list with `custom_bad_words`.
 
-### `probabilistic_layer(statement, threshold=0.5)`
+### `probabilistic_layer(statement, threshold=None)`
 
 ```python
 def probabilistic_layer(
     statement: str,
-    threshold: float = 0.5,
+    threshold: float | None = None,
 ) -> EvaluationResult
 ```
 
-Runs the `detoxify` BERT model on the statement. The model returns scores for six toxicity categories; the maximum is used. Returns the raw max score.
+Runs the `detoxify` BERT model on the statement. The model returns scores for six toxicity categories; the maximum is used. Returns the raw max score. When `threshold` is `None`, uses the instance threshold set at construction.
 
-### `semantic_layer(statement, illegal_categories=None, threshold=0.5)`
+### `semantic_layer(statement, illegal_categories=None, threshold=None)`
 
 ```python
 def semantic_layer(
     statement: str,
     illegal_categories: list[str] | None = None,
-    threshold: float = 0.5,
+    threshold: float | None = None,
 ) -> EvaluationResult
 ```
 

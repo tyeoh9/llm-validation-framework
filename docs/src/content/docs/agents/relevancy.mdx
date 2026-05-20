@@ -3,7 +3,7 @@ title: RelevancyAgent
 description: LLM-as-a-judge check that the answer directly addresses the question asked.
 ---
 
-import { Badge } from '@astrojs/starlight/components';
+import { Aside, Badge } from '@astrojs/starlight/components';
 
 <Badge text="Requires API key" variant="caution" />
 
@@ -18,6 +18,7 @@ RelevancyAgent(
     config_path: str | None = None,
     provider: str = "anthropic",
     model: str = "claude-haiku-4-5-20251001",
+    threshold: float = 0.5,
 )
 ```
 
@@ -26,6 +27,23 @@ RelevancyAgent(
 | `config_path` | `str \| None` | `None` | Path to `config.ini` for API key loading. |
 | `provider` | `str` | `"anthropic"` | LLM provider for the judge model. |
 | `model` | `str` | `"claude-haiku-4-5-20251001"` | Judge model identifier. |
+| `threshold` | `float` | `0.5` | Minimum GEval score required to pass. See note below before changing this. |
+
+## `update_threshold(threshold)`
+
+```python
+def update_threshold(self, threshold: float) -> None
+```
+
+Updates the pass/fail threshold after construction. Useful when evaluating the same agent against datasets from different domains without re-instantiating it.
+
+| Parameter | Type | Description |
+|---|---|---|
+| `threshold` | `float` | New minimum score to pass. Must be in `[0.0, 1.0]`. |
+
+<Aside type="caution" title="Advanced use only">
+The default threshold of `0.5` is calibrated to work well across general-purpose use cases. Only override it if your domain requires stricter or more lenient scoring **and you have validated the new value against labelled data**. Incorrect thresholds can significantly increase false-positive or false-negative rates.
+</Aside>
 
 ## `evaluate(data)`
 

@@ -21,6 +21,10 @@ PrivacyAgent(system_prompt: str | None = None)
 |---|---|---|---|
 | `system_prompt` | `str \| None` | `None` | If provided, the agent also checks whether phrases from this prompt appear in the response (system prompt leakage detection). |
 
+<Aside type="note">
+`PrivacyAgent` does not have a configurable threshold. Detection is purely deterministic: the agent returns `"FAIL"` if any sensitive pattern is matched and `"PASS"` otherwise. There is no continuous score to threshold against.
+</Aside>
+
 ## `evaluate(data)`
 
 ```python
