@@ -1,4 +1,9 @@
-from typing import Literal, NotRequired, TypedDict
+from typing import Literal, TypedDict
+
+try:
+    from typing import NotRequired
+except ImportError:
+    from typing_extensions import NotRequired
 
 
 class EvaluationResult(TypedDict):

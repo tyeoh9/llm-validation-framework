@@ -10,7 +10,7 @@ class Chatbot:
     messages list when chat history support is needed.
     """
 
-    def __init__(self, provider: str = "anthropic", model: str = "claude-haiku-4-5-20251001",
+    def __init__(self, provider: str = "anthropic", model: str = "claude-opus-4-8",
                  config_path: str | None = None):
         self.provider = provider
         self.model = model
@@ -20,7 +20,10 @@ class Chatbot:
 
     def stream(self, question: str):
         """Yield response tokens one at a time."""
-        messages = [{"role": "user", "content": question}]
+        messages = [
+            {"role": "system", "content": "Be concise. Keep all responses to 2-3 sentences maximum."},
+            {"role": "user", "content": question},
+        ]
         response = litellm.completion(
             model=self.model_string,
             messages=messages,

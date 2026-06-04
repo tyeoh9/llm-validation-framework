@@ -21,6 +21,7 @@ def main() -> None:
     args = parser.parse_args()
     os.chdir(UI_DIR)
     handler = http.server.SimpleHTTPRequestHandler
+    socketserver.TCPServer.allow_reuse_address = True
     with socketserver.TCPServer(("", args.port), handler) as httpd:
         print(f"Serving UI at http://127.0.0.1:{args.port}/")
         print("Press Ctrl+C to stop.")

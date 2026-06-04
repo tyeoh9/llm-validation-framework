@@ -269,6 +269,13 @@ function runChat(question) {
 
 // ── Form handlers ──
 
+questionInput.addEventListener("keydown", (e) => {
+  if (e.key === "Enter" && !e.shiftKey) {
+    e.preventDefault();
+    chatForm.requestSubmit();
+  }
+});
+
 chatForm.addEventListener("submit", (e) => {
   e.preventDefault();
   const question = questionInput.value.trim();

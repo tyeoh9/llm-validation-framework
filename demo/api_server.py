@@ -27,7 +27,7 @@ _chatbot = None
 def get_guardrails():
     global _input_guardrail, _output_guardrail
     if _input_guardrail is None:
-        _input_guardrail = Pipe(steps=[ToxicityAgent(), PrivacyAgent()])
+        _input_guardrail = Pipe(steps=[ToxicityAgent(), BiasAgent()])
     if _output_guardrail is None:
         _output_guardrail = Pipe(
             steps=[ToxicityAgent(), PrivacyAgent(), AccuracyAgent(), BiasAgent()]
